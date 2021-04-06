@@ -1,0 +1,10 @@
+{
+    "json.schemas": [
+        {
+            "fileMatch": [
+                "/fiction.json"
+            ],
+            "url":"/fiction-schema.json" 
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "title": "지맥 II",
+    "content": [
+        "c/prologue.md",
+        {
+            "title": "Chapter 1",
+            "content": [
+                "c/Chapter 1/*.md"
+            ]
+        },
+        "c/Chapter 2/*.md",
+        { "title":"Epilogue", "content":"c/epilogue.md" }
+    ]
+}
