@@ -3,24 +3,16 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as childproc from 'child_process';
-import { FictionModel } from './FictionModel';
+import { FictionModel, Hashtag } from './FictionModel';
 import * as path from 'path';
 
-const FICTION_JSON = "fiction.json";
+const CONFIG_FILE = "fictioner.yml";
 
 var model: FictionModel;
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	// console.log('Congratulations, your extension "fictioner" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
+export async function activate(context: vscode.ExtensionContext) {
 
 	if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
 		vscode.window.showErrorMessage("Open workspace to enable Fictioner");
@@ -28,24 +20,22 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	let wsPath = vscode.workspace.workspaceFolders[0].uri.path;
-	let jsonPath = path.join(wsPath, FICTION_JSON);
-	if (!fs.existsSync(jsonPath)) {
+	let configPath = path.join(wsPath, CONFIG_FILE);
+	if (!fs.existsSync(configPath)) {
 		// create fiction.json
-		let jsonContent = 
-			`{\n` + 
-			`    "title": "${path.basename(wsPath)}",\n` +
-			`    "content": [\n` +
-			`    ]\n` +
-			`}\n`;
-		fs.writeFile(jsonPath, jsonContent, () => {
+		let yamlContent = 
+			`title: ${path.basename(wsPath)}\n` +
+			'contents:\n' +
+			'  - src/*.md\n';
+		fs.writeFile(configPath, yamlContent, () => {
 			// open the file in the editor
-			vscode.window.showTextDocument(vscode.Uri.file(jsonPath), {preview: false});
+			vscode.window.showTextDocument(vscode.Uri.file(configPath), {preview: false});
 		});
 	}
 
 	let disposables: vscode.Disposable[] = [];
 
-	let regcmd = function(name:string, f: ()=>void ) {
+	function regcmd(name:string, f: (param?:any)=>void ) {
 		disposables.push(vscode.commands.registerCommand(name, f));
 	};
 
@@ -77,21 +67,28 @@ export function activate(context: vscode.ExtensionContext) {
 		);
 	});
 
-	regcmd('fictioner.itemUp', () => {
-		vscode.window.showInformationMessage('itemUp() called');
+	regcmd('fictioner.searchtag', (item: any) => {
+		if (item instanceof Hashtag) {
+			vscode.commands.executeCommand('workbench.action.findInFiles', {
+				query: `#${item.id}[!?\\s-]`,
+				triggerSearch: true,
+				isRegex: true
+			});
+		}
 	});
 
-	// vscode.window.createTreeView('fictionView', {
-	// 	treeDataProvider: new FictionDataProvider(vscode.workspace.workspaceFolders![0].uri.path)
-	// });
-	model = new FictionModel(vscode.workspace.workspaceFolders![0].uri.path, FICTION_JSON);
-	model.reload().then(()=>{
-		// register view after doc model is initialized
-		disposables.push(vscode.window.registerTreeDataProvider(
-			'fictionView',
-			model
-		  ));
-	});
+	let diagCollection = vscode.languages.createDiagnosticCollection('fictioner');
+	disposables.push(diagCollection);
+
+	model = new FictionModel(vscode.workspace.workspaceFolders![0].uri.path, CONFIG_FILE, diagCollection);
+
+	await model.reload();
+	
+	// register view after doc model is initialized
+	disposables.push(vscode.window.registerTreeDataProvider(
+		'fictionView',
+		model
+	));
 
 	// intellisense for hashtags
 	disposables.push(vscode.languages.registerCompletionItemProvider(
@@ -100,7 +97,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.concat(disposables);
 
-	vscode.commands.executeCommand('setContext', 'fictionJsonExists', true);
+	vscode.commands.executeCommand('setContext', 'fictionerEnabled', true);
 }
 
 // this method is called when your extension is deactivated
@@ -108,15 +105,11 @@ export function deactivate() {}
 
 function compile() {
 	vscode.window.showInformationMessage('compile() called');
+
+	if (vscode.window.terminals.length===0) {
+		vscode.window.createTerminal();
+	}
+
 	let cmd = "pandoc -o out.docx " + model.getFilePaths(true).join(' ');
-	let foo = childproc.exec(cmd, {cwd: model.workspaceRoot}, 
-		(error: childproc.ExecException|null, stdout:string, stderr:string) => {
-		   if (error) {
-			   console.log('error: ' + error);
-		   } else {
-			console.log('command: ' + cmd);
-			console.log('stdout: ' + stdout);
-			console.log('stderr: ' + stderr);      
-		   }
-	    });
+	vscode.window.terminals[0].sendText(cmd);
 }

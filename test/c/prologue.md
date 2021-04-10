@@ -2,7 +2,7 @@
 
 A long time ago in a galaxy far, far away...
 
-<!-- #some_tag?  #second_tag! -->
+<!-- #some_tag?  -->
 It is a period of civil war.
 Rebel spaceships, striking
 from a hidden base, have won

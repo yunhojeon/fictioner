@@ -8,3 +8,4 @@ face is a mass of computer lights surrounding a radar eye.
 Threepio, on the other hand, is a tall, slender robot of 
 human proportions. He has a gleaming bronze-like metallic 
 surface of an Art Deco design.
+<!-- #some_tag! -->

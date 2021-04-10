@@ -2,7 +2,7 @@
 
 ## Scene 1
 
-<!-- #tatooine? #another_tag! #basic_tag? -->
+<!-- #tatooine? -->
 The awesome yellow planet of Tatooine emerges from a total 
 eclipse, her two moons glowing against the darkness. A tiny 
 silver spacecraft, a Rebel Blockade Runner firing lasers 
