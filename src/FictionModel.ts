@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as glob from 'glob';
-import {parse} from 'yaml';
+import * as yaml from 'yaml';
+import * as chokidar from 'chokidar';
 
 const WARNING_SIGN = '\u26a0';
 const ERROR_SIGN = '\u26d2';
@@ -42,7 +43,9 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
   constructor(public workspaceRoot:string, private configPath: string, private diagCollection: vscode.DiagnosticCollection) {
 
     this.configPath = path.join(workspaceRoot, this.configPath);
-    fs.watch(this.configPath,() => {
+    const watcher = chokidar.watch(this.configPath, {persistent:true});
+    watcher.on('change',(file) => {
+      console.log(`config file changed.`);
       this.reload();
     });
   }
@@ -51,7 +54,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
     console.log('reload called');
     try {
       let start = new Date().getMilliseconds();
-      this.config = parse(await fs.promises.readFile(this.configPath, 'utf-8'));
+      this.config = yaml.parse(await fs.promises.readFile(this.configPath, 'utf-8'));
       if (!this.config.title || !this.config.contents) {
         throw new Error("Invalid config file");
       }
@@ -273,15 +276,18 @@ class DocFile {
   constructor(public model: FictionModel, public filename: string, public givenTitle?:string) {
     this.docNum = DocFile.totalDocNum;
     DocFile.totalDocNum++;
-    let watcher = fs.watch(this.filename,() => {
+
+    const watcher = chokidar.watch(this.filename);
+    watcher.on('change',(file) => {
       watcher.close();
+      console.log('DocFile calling model reload()');
       this.model.reload();
     });
   }
 
   getTreeItem(): vscode.TreeItem {
-    var errors=0;
-    var warnings=0;
+    let errors=0;
+    let warnings=0;
     for(var t of this.hashtags) {
       if (t.error) {
         errors++;
@@ -319,8 +325,8 @@ class DocFile {
   }
 
   async scan(): Promise<Hashtag[]> {
-    let hashtags: Hashtag[] = [];
-    let text = await fs.promises.readFile(this.filename, "utf-8");
+    const hashtags: Hashtag[] = [];
+    const text = await fs.promises.readFile(this.filename, "utf-8");
     let lineno = 0;
     this.scannedTitle = undefined;
     for(const line of text.split(/\r\n|\n\r|\n|\r/g)) { // for each line
