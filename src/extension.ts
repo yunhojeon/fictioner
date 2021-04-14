@@ -19,7 +19,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		return;
 	}
 
-	let wsPath = vscode.workspace.workspaceFolders[0].uri.path;
+	let wsPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
 	let configPath = path.join(wsPath, CONFIG_FILE);
 	if (!fs.existsSync(configPath)) {
 		// create fiction.json
@@ -80,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	let diagCollection = vscode.languages.createDiagnosticCollection('fictioner');
 	disposables.push(diagCollection);
 
-	model = new FictionModel(vscode.workspace.workspaceFolders![0].uri.path, CONFIG_FILE, diagCollection);
+	model = new FictionModel(vscode.workspace.workspaceFolders![0].uri.fsPath, CONFIG_FILE, diagCollection);
 
 	await model.reload();
 	
