@@ -175,7 +175,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
       }
     }
     if (!this.document) {
-      console.log("no workspace or jsonObj");
+      console.log("no workspace or config file");
       return Promise.resolve([]);
     }
     if (!element) {

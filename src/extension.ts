@@ -21,15 +21,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	let configPath = path.join(wsPath, CONFIG_FILE);
 	if (!fs.existsSync(configPath)) {
 		// create fiction.json
-		let yamlContent = 
-			`title: ${path.basename(wsPath)}\n` +
-			'contents:\n' +
-			'  - src/*.md\n'+
-			'compile:\n'+
-			'  pandoc -o out.docx';
-		fs.writeFile(configPath, yamlContent, () => {
-			config();
-		});
+		fs.writeFile(configPath, 
+			formatString(configSample, new Map([["title", path.basename(wsPath)]])),
+			() => config());
 	}
 
 	let disposables: vscode.Disposable[] = [];
@@ -112,3 +106,25 @@ function config() {
 	// open the file in the editor
 	vscode.window.showTextDocument(vscode.Uri.file(model.configPath), {preview: false});
 }
+
+function formatString(source:string, values:Map<string, string>) {
+	return source.replace(
+		/{(\w+)}/g,
+		(withDelim:string, woDelim:string) => values.get(woDelim)??withDelim
+	);
+}
+
+const configSample = `# Fictioner sample config file
+title: {title}
+
+# List .md files. Files will be included in the order specified here. 
+# Wildcards can be used and matched files will included in alphabetical order.     
+contents:
+  - content/*.md
+
+# Change following command line to your taste.
+# Refer to https://pandoc.org/MANUAL.html for pandoc's command line options
+compile: >
+  pandoc -o "{title}.docx"
+  -N --top-level-division=chapter -V fontsize=11pt -V papersize:"a4paper" -V geometry:margin=1in
+`;

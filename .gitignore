@@ -3,4 +3,5 @@ dist
 node_modules
 .vscode-test/
 *.vsix
-fictioner-0.0.1.tgz
+release
+*.docx
