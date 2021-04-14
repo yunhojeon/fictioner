@@ -29,7 +29,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
   readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | undefined | void> 
     = this._onDidChangeTreeData.event;
 
-  private config: any;
+  public  config: any;
   private document?: DocObject;
   private errorMessage:string|undefined = undefined;
 
@@ -40,7 +40,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
   private hashtagQuestioned = new Id2Hashtags();
   private hashtagAnswered   = new Id2Hashtags();
 
-  constructor(public workspaceRoot:string, private configPath: string, private diagCollection: vscode.DiagnosticCollection) {
+  constructor(public workspaceRoot:string, public configPath: string, private diagCollection: vscode.DiagnosticCollection) {
 
     this.configPath = path.join(workspaceRoot, this.configPath);
     const watcher = chokidar.watch(this.configPath, {persistent:true});
@@ -214,7 +214,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
   }
 }
 
-type DocObject = DocSection[] | DocFile[];
+type DocObject = (DocSection|DocFile)[];
 
 
 function obj2doc(model: FictionModel, obj: any): DocObject {
@@ -226,7 +226,16 @@ function obj2doc(model: FictionModel, obj: any): DocObject {
     // contents:
     //   - file_pattern_1
     //   - file_pattern_2
-    return obj.flatMap((path: string)=>path2files(model, path));
+    let children: DocObject = [];
+    for(let c of obj) {
+      if (typeof(c)==="string") { 
+        children.push(...path2files(model,c)); 
+      } else {
+        children.push(...obj2doc(model, c));
+      }
+    }
+    return children;
+    // return obj.flatMap((path: string)=>path2files(model, path));
   } else if (typeof(obj)==="object") {
     // chapter_1:
     //   content list
@@ -245,10 +254,16 @@ function path2files(model: FictionModel, filepath: string): DocFile[] {
 function allFiles(contents: DocObject): DocFile[] {
   if (!contents.length) { 
     return []; 
-  } else if (contents[0] instanceof DocFile) { 
-    return <DocFile[]> contents; 
   } else {
-    return (<DocSection[]>contents).flatMap((section)=>allFiles(section.content));
+    let files:DocFile[] = [];
+    for(let obj of contents) {
+      if (obj instanceof DocFile) {
+        files.push(obj);
+      } else {
+        files.push(...allFiles(obj.content));
+      }
+    }
+    return files; 
   }
 }
 
@@ -258,7 +273,10 @@ class DocSection {
   }
 
   getTreeItem(): vscode.TreeItem {
-    return new vscode.TreeItem(this.title, vscode.TreeItemCollapsibleState.Expanded);
+    let item = new vscode.TreeItem(this.title, vscode.TreeItemCollapsibleState.Expanded);
+    // item.iconPath = new vscode.ThemeIcon("folder");
+    item.iconPath = vscode.ThemeIcon.Folder;
+    return item;
   }
 
   getChildren(): any[] {
@@ -310,8 +328,8 @@ class DocFile {
         vscode.TreeItemCollapsibleState.None);
     item.resourceUri = vscode.Uri.file(this.filename);
     item.id = this.filename;
-    // item.iconPath = vscode.ThemeIcon.File;
-    item.iconPath = new vscode.ThemeIcon("file-text", new vscode.ThemeColor((errors)? "errorForeground":"icon.foreground"));
+    item.iconPath = vscode.ThemeIcon.File;
+    // item.iconPath = new vscode.ThemeIcon("file-text", new vscode.ThemeColor((errors)? "errorForeground":"icon.foreground"));
     item.command = {
       title: "",
       command: 'fictioner.open',
@@ -330,11 +348,12 @@ class DocFile {
     let lineno = 0;
     this.scannedTitle = undefined;
     for(const line of text.split(/\r\n|\n\r|\n|\r/g)) { // for each line
-      if (line.startsWith('#')) {
-        this.scannedTitle = line.split(/\s/)[1];
+      let m;
+      if (m=/^#+\s+(.*)$/gu.exec(line)) {
+        this.scannedTitle = m[1];
       } else {
         if (/<!--(.*?)-->/gu.test(line)){
-          for(let m of line.matchAll(/#([\p{L}\p{N}_\?!]+)/gu)) {
+          for(let m of line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu)) {
             hashtags.push(new Hashtag(this, lineno, m.index??0, m[0]));
           }
         }

@@ -1,9 +1,8 @@
 title: test
 contents:
-  Prologue:
-    c/prologue.md
-  Chapter 1:
-    c/Chapter 1/*.md
-  Chapter 2:
-    c/Chapter 2/*.md
-  Epilogue: c/epilogue.md
+  - c/prologue.md
+  - Chapter 1: c/Chapter 1/*.md
+  - Chapter 2: c/Chapter 2/*.md
+  - c/epilogue.md
+compile:
+  pandoc -o out.docx
