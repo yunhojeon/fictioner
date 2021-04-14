@@ -4,25 +4,14 @@ import * as path from 'path';
 import * as glob from 'glob';
 import * as yaml from 'yaml';
 import * as chokidar from 'chokidar';
+import { promisify } from 'util';
 
 const WARNING_SIGN = '\u26a0';
 const ERROR_SIGN = '\u26d2';
 
-/*
- * { "title": "Starwars Episode IV", "content": "sw4.md"}
- * { "title": "Starwars Episode IV", 
- *   "content": [
- *     "sw401.md",
- *     "sw402.md", 
- *     ...
- * ]}
- * "filepath.md"
- * [ "path1.md", "path2.md", "path3.md", ...] 
- */
-
 export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.CompletionItemProvider<vscode.CompletionItem> {
 
-  // in order to update TreeView, following should be implemented.
+  // in order to update TreeView, followings should be implemented.
   // see: https://code.visualstudio.com/api/extension-guides/tree-view
   private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | undefined | void> 
     = new vscode.EventEmitter<vscode.TreeItem | undefined | undefined | void>();
@@ -41,17 +30,11 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
   private hashtagAnswered   = new Id2Hashtags();
 
   constructor(public workspaceRoot:string, public configPath: string, private diagCollection: vscode.DiagnosticCollection) {
-
     this.configPath = path.join(workspaceRoot, this.configPath);
-    const watcher = chokidar.watch(this.configPath, {persistent:true});
-    watcher.on('change',(file) => {
-      console.log(`config file changed.`);
-      this.reload();
-    });
   }
 
   async reload() {
-    console.log('reload called');
+    console.log('reloading...');
     try {
       let start = new Date().getMilliseconds();
       this.config = yaml.parse(await fs.promises.readFile(this.configPath, 'utf-8'));
@@ -65,7 +48,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
       this.hashtagAnswered.clear();
 
       let tagIds = new Set<string>();
-      DocFile.totalDocNum = 0;
+      // DocFile.totalDocNum = 0;
       await Promise.all(allFiles(this.document).map(
           async (file: DocFile)=> {
             let hashtags = await file.scan();
@@ -96,7 +79,15 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
       // will be shown in the view panel
       this.errorMessage = `Error scanning document: ${error}`;
     };
-    
+    let watchFiles = [this.configPath, ...this.getFilePaths(false)];
+    const watcher = chokidar.watch(watchFiles);
+    console.log(`watching ${watchFiles.length} files.`);
+    watcher.on('change',async (file) => {
+      watcher.close();
+      console.log(`File ${file} changed.`);
+      await promisify(setTimeout)(100);
+      this.reload();
+    });
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -154,7 +145,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
 
     }
     diagMap.forEach((diags, docfile) => {
-      this.diagCollection.set(vscode.Uri.parse(docfile), diags);
+      this.diagCollection.set(vscode.Uri.file(docfile), diags);
     });
   }
 
@@ -294,13 +285,6 @@ class DocFile {
   constructor(public model: FictionModel, public filename: string, public givenTitle?:string) {
     this.docNum = DocFile.totalDocNum;
     DocFile.totalDocNum++;
-
-    const watcher = chokidar.watch(this.filename);
-    watcher.on('change',(file) => {
-      watcher.close();
-      console.log('DocFile calling model reload()');
-      this.model.reload();
-    });
   }
 
   getTreeItem(): vscode.TreeItem {

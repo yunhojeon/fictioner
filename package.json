@@ -2,8 +2,8 @@
 	"name": "fictioner",
 	"publisher": "YunhoJeon",
 	"displayName": "Fiction Writing Tool",
-	"description": "An integrated tool for writing fiction using Markdown",
-	"version": "0.0.1",
+	"description": "vscode extension for writing fiction using Markdown",
+	"version": "0.1.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/yunhojeon/fictioner"
