@@ -26,10 +26,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		let yamlContent = 
 			`title: ${path.basename(wsPath)}\n` +
 			'contents:\n' +
-			'  - src/*.md\n';
+			'  - src/*.md\n'+
+			'compile:\n'+
+			'  pandoc -o out.docx';
 		fs.writeFile(configPath, yamlContent, () => {
-			// open the file in the editor
-			vscode.window.showTextDocument(vscode.Uri.file(configPath), {preview: false});
+			config();
 		});
 	}
 
@@ -43,14 +44,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		// enabling will be done by above code
 	});
 	
-	regcmd('fictioner.refresh', () => {
-		model.reload();
-	});
-	
-	regcmd('fictioner.compile', () => {
-		compile();
-	});
-
+	regcmd('fictioner.refresh',	()=>{ model.reload(); }); // wrapper function is needed becase model is undefined yet
+	regcmd('fictioner.compile', compile);
+	regcmd('fictioner.config', config);
 	regcmd('fictioner.open', (...args:any[]) => {
 		// console.log(`showing ${args[0]}`);
 		vscode.window.showTextDocument(vscode.Uri.file(args[0]), {preview: false});
@@ -104,12 +100,17 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() {}
 
 function compile() {
-	vscode.window.showInformationMessage('compile() called');
-
+	// vscode.window.showInformationMessage('compile() called');
 	if (vscode.window.terminals.length===0) {
 		vscode.window.createTerminal();
 	}
 
-	let cmd = "pandoc -o out.docx " + model.getFilePaths(true).join(' ');
-	vscode.window.terminals[0].sendText(cmd);
+	let cmd = model.config.compile.trim()??'pandoc -o out.docx';
+	let args = model.getFilePaths(true).map((p)=>`"${p}"`).join(' ');
+	vscode.window.terminals[0].sendText(cmd+' '+args);
+}
+
+function config() {
+	// open the file in the editor
+	vscode.window.showTextDocument(vscode.Uri.file(model.configPath), {preview: false});
 }
