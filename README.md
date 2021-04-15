@@ -15,16 +15,12 @@ Fictioner는 소설이나 시나리오를 마크다운으로 작성하는 것을
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [Pandoc](https://pandoc.org/)
 
-Pandoc은 command line에서 이름만으로 실행될 수 있도록 PATH에 포함되어 있어야 합니다. 설정을 바꾸면 Pandoc외의 다른 프로그램을 사용할 수도 있습니다. 단,
-```
-program [options] source1.md source2.md source3.md ...
-```
-와 같은 형태로 실행할 수 있어야 합니다.
+Pandoc은 command line에서 이름만으로 실행될 수 있도록 PATH에 포함되어 있어야 합니다. Pandoc외의 다른 프로그램을 사용할 수도 있습니다.
 
 ## 설치
 
-- [릴리즈 폴더](release/)에서 `fictioner-x.x.x.vsix` 최신 버전을 다운로드 받습니다.
-- 명령 프롬프트(혹은 터미널)을 열고, 다운로드 받은 디렉토리에 가서 아래 명령을 실행합니다 (x.x.x.는 실제 버전 명으로).
+- [릴리즈 폴더](release/)에서 `fictioner-x.x.x.vsix` 최신 버전을 다운로드 받습니다. 아직 완성도가 낮아서 스토어에는 등록하지 않았습니다.
+- 명령 프롬프트(혹은 터미널)를 열고, 다운로드 받은 디렉토리에서 아래 명령을 실행해 extension을 vscode에 설치합니다 (x.x.x.는 실제 버전 명으로).
 ```
 code --install-extension fictioner-x.x.x.vsix
 ```
@@ -32,7 +28,8 @@ code --install-extension fictioner-x.x.x.vsix
 
 ## 처음 실행 및 설정
 
-vscode에서 작품 문서 폴더를 열고, command palette를 열어 (Ctrl/Command+Shift+P 또는 F1) `Fictioner: Enable`을 실행합니다. `fictioner.yml` 파일이 생성되고 편집창이 열릴 것입니다. 폴더명이 `내 소설`이었다면 다음과 같은 내용이 보일 것입니다.
+vscode에서 문서 폴더를 열고, command palette를 열어 (Ctrl/Command+Shift+P 또는 F1) `Fictioner: Enable`을 실행합니다. `fictioner.yml` 파일이 생성되고 편집창이 열릴 것입니다. 폴더명이 '내 소설'이었다면 다음과 같은 [YAML](https://ko.wikipedia.org/wiki/YAML) 형식의 설정이 보일 것입니다.
+
 ```
 # Fictioner sample config file
 title: 내 소설 
@@ -48,6 +45,7 @@ compile: >
 ```
 
 - `title`: 추후 사용 예정
+- `compile`: 마크다운 파일을 docx 등 원하는 포맷으로 컴파일하기 위한 쉘 명령어. 여기 선언된 내용 뒤에 파일명들이 추가되고 vscode 내부 터미널에서 실행됩니다.
 - `contents`: 마크다운 파일들을 작품의 순서대로 명시합니다. 저는 마크다운 파일들을 한 폴더에 넣고 `000_프롤로그.md`와 같이 챕터 번호를 파일명 앞에 붙이기 때문에 `content/*.md`(윈도우스에서도 경로를 `/`로 구분해도 됨)처럼 한 줄로 쓸 수 있습니다만, 다음과 같이 복잡하게 명시할 수도 있습니다. 
 ```
 contents:
