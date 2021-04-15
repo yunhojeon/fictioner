@@ -6,9 +6,6 @@ import * as yaml from 'yaml';
 import * as chokidar from 'chokidar';
 import { promisify } from 'util';
 
-const WARNING_SIGN = '\u26a0';
-const ERROR_SIGN = '\u26d2';
-
 export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.CompletionItemProvider<vscode.CompletionItem> {
 
   // in order to update TreeView, followings should be implemented.
@@ -298,22 +295,25 @@ class DocFile {
         warnings++;
       }
     }
-    var title=this.getTitle();
+    let title=this.getTitle();
+    let titleOrigLen = title.length;
     if (warnings) {
-      title += ' '+WARNING_SIGN+warnings;
+      title += ` W${warnings}`;
     }
     if (errors) {
-      title += ' '+ERROR_SIGN+errors;
+      title += ` E${errors}`;
     }
+    let label = (title===this.getTitle())?
+       title:
+       <vscode.TreeItemLabel> {label: title, highlights: [[titleOrigLen+1, title.length]]};
     let item = new vscode.TreeItem(
-      title,
+      label,
       (this.hashtags.length>0)? 
         vscode.TreeItemCollapsibleState.Collapsed : 
         vscode.TreeItemCollapsibleState.None);
     item.resourceUri = vscode.Uri.file(this.filename);
     item.id = this.filename;
     item.iconPath = vscode.ThemeIcon.File;
-    // item.iconPath = new vscode.ThemeIcon("file-text", new vscode.ThemeColor((errors)? "errorForeground":"icon.foreground"));
     item.command = {
       title: "",
       command: 'fictioner.open',
@@ -412,15 +412,21 @@ export class Hashtag {
     var title = this.token;
 
     var tooltip = "";
+
+    let item = new vscode.TreeItem(title);
+
     if (this.warning) {
-      title += '  '+WARNING_SIGN;
+      // title += '  '+WARNING_SIGN;
+      item.iconPath = new vscode.ThemeIcon('warning', 
+        new vscode.ThemeColor('list.warningForeground'));
       tooltip += this.warning;
     }
     if (this.error) {
-      title += '  '+ERROR_SIGN;
+      // title += '  '+ERROR_SIGN;
+      item.iconPath = new vscode.ThemeIcon('error', 
+      new vscode.ThemeColor('list.errorForeground'));
       tooltip += this.error;
     }
-    let item = new vscode.TreeItem(title);
     item.tooltip = tooltip;
     item.contextValue = 'hashtag';
     item.command = {
