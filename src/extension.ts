@@ -1,61 +1,74 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as childproc from 'child_process';
+import { Uri, window, workspace } from 'vscode';
 import { FictionModel, Hashtag } from './FictionModel';
-import * as path from 'path';
+import { Analytics } from './Analytics';
+import { readTextFile, writeTextFile, formatString } from './Util';
+
 
 const CONFIG_FILE = "fictioner.yml";
+export const EXT_NAME = "fictioner";
 
-var model: FictionModel;
+let model: FictionModel;
+
+export function homeDir(): Uri | undefined {
+	return workspace?.workspaceFolders?.[0].uri;
+}
+
+export function configFile(): Uri | undefined {
+	const home = homeDir();
+	return home ? Uri.joinPath(home, CONFIG_FILE) : undefined;
+}
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
 
-	if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders[0]) {
-		vscode.window.showErrorMessage("Open workspace to enable Fictioner");
+	if (!homeDir()) {
+		window.showErrorMessage("Open workspace to enable Fictioner");
 		return;
 	}
 
-	let wsPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-	let configPath = path.join(wsPath, CONFIG_FILE);
-	if (!fs.existsSync(configPath)) {
-		// create fiction.json
-		fs.writeFile(configPath, 
-			formatString(configSample, new Map([["title", path.basename(wsPath)]])),
-			() => config());
+	const config = configFile()!;
+
+	try {
+		// if config file does not exist in the workspace...
+		await workspace.fs.stat(config);
+	} catch {
+		// then create one from the template
+		const newConfig = formatString(configTemplate, new Map([["title", workspace.name!]]));
+		await writeTextFile(config, newConfig);
+		openConfig(); // show config file
 	}
 
-	let disposables: vscode.Disposable[] = [];
+	const disposables: vscode.Disposable[] = [];
 
-	function regcmd(name:string, f: (param?:any)=>void ) {
+	function regCmd(name: string, f: (param?: any) => void) {
 		disposables.push(vscode.commands.registerCommand(name, f));
 	};
 
-	regcmd('fictioner.enable', () => {
-		// enabling will be done by above code
-	});
-	
-	regcmd('fictioner.refresh',	()=>{ model.reload(); }); // wrapper function is needed becase model is undefined yet
-	regcmd('fictioner.compile', compile);
-	regcmd('fictioner.config', config);
-	regcmd('fictioner.open', (...args:any[]) => {
+	regCmd('fictioner.enable', () => {
+		console.log("fictioner.enable command executed");
+	}); // enabling will be done by above code
+	regCmd('fictioner.refresh', () => { model.scan(); }); // wrapper function is needed becase model is undefined yet
+	regCmd('fictioner.compile', compile);
+	regCmd('fictioner.config', openConfig);
+	regCmd('fictioner.open', (...args: any[]) => {
 		// console.log(`showing ${args[0]}`);
-		vscode.window.showTextDocument(vscode.Uri.file(args[0]), {preview: false});
+		window.showTextDocument(Uri.file(args[0]), { preview: false });
 	});
 
-	regcmd('fictioner.openAndSelect', (...args:any[]) => {
+	regCmd('fictioner.openAndSelect', (...args: any[]) => {
 		// console.log(`showing ${args[0]}`);
-		vscode.window.showTextDocument(vscode.Uri.file(args[0]), {preview: false}).then(
-			(editor:vscode.TextEditor)=>{
-				let range = args[1] as vscode.Range;
+		window.showTextDocument(Uri.file(args[0]), { preview: false }).then(
+			(editor: vscode.TextEditor) => {
+				const range = args[1] as vscode.Range;
 				editor.revealRange(range);
 				editor.selection = new vscode.Selection(range.start, range.end);
 			}
 		);
 	});
 
-	regcmd('fictioner.searchtag', (item: any) => {
+	regCmd('fictioner.searchtag', (item: any) => {
 		if (item instanceof Hashtag) {
 			vscode.commands.executeCommand('workbench.action.findInFiles', {
 				query: `#${item.id}[!?\\s-]`,
@@ -65,15 +78,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	let diagCollection = vscode.languages.createDiagnosticCollection('fictioner');
-	disposables.push(diagCollection);
+	// analytics view
+	const analViewUri = Uri.parse(EXT_NAME + ":( Fiction Analysis ).md");
+	const vdocProvider = new Analytics(analViewUri);
 
-	model = new FictionModel(vscode.workspace.workspaceFolders![0].uri.fsPath, CONFIG_FILE, diagCollection);
-
-	await model.reload();
+	disposables.push(workspace.registerTextDocumentContentProvider(EXT_NAME, vdocProvider));
+	regCmd('fictioner.analytics', async () => {
+		const doc = await workspace.openTextDocument(analViewUri);
+		await window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside });
+	});
 	
+	model = new FictionModel();
+	disposables.push(model);
+
+	await model.scan();
+
 	// register view after doc model is initialized
-	disposables.push(vscode.window.registerTreeDataProvider(
+	disposables.push(window.registerTreeDataProvider(
 		'fictionView',
 		model
 	));
@@ -89,38 +110,32 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
 
 function compile() {
-	// vscode.window.showInformationMessage('compile() called');
-	if (vscode.window.terminals.length===0) {
-		vscode.window.createTerminal();
+	// window.showInformationMessage('compile() called');
+	if (window.terminals.length === 0) {
+		window.createTerminal();
 	}
 
-	let cmd = model.config.compile.trim()??'pandoc -o out.docx';
-	let args = model.getFilePaths(true).map((p)=>`"${p}"`).join(' ');
-	vscode.window.terminals[0].sendText(cmd+' '+args);
+	const cmd = model.config.compile.trim() ?? 'pandoc -o out.docx';
+	const args = model.getFilePaths(true).map((p) => `"${p}"`).join(' ');
+	window.terminals[0].sendText(cmd + ' ' + args);
 }
 
-function config() {
-	// open the file in the editor
-	vscode.window.showTextDocument(vscode.Uri.file(model.configPath), {preview: false});
+function openConfig() {
+	window.showTextDocument(configFile()!, { preview: false });
 }
 
-function formatString(source:string, values:Map<string, string>) {
-	return source.replace(
-		/{(\w+)}/g,
-		(withDelim:string, woDelim:string) => values.get(woDelim)??withDelim
-	);
-}
 
-const configSample = `# Fictioner sample config file
+
+const configTemplate = `# Fictioner sample config file
 title: {title}
 
 # List .md files. Files will be included in the order specified here. 
 # Wildcards can be used and matched files will included in alphabetical order.     
 contents:
-  - content/*.md
+  - contents/*.md
 
 # Change following command line to your taste.
 # Refer to https://pandoc.org/MANUAL.html for pandoc's command line options

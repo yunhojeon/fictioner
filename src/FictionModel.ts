@@ -1,136 +1,127 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import { Uri } from 'vscode';
 import * as path from 'path';
 import * as glob from 'glob';
 import * as yaml from 'yaml';
 import * as chokidar from 'chokidar';
 import { promisify } from 'util';
+import { readTextFile } from './Util';
+import { homeDir, configFile, EXT_NAME } from './extension';
 
-export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.CompletionItemProvider<vscode.CompletionItem> {
+export class FictionModel implements
+  vscode.TreeDataProvider<Object>,
+  vscode.CompletionItemProvider<vscode.CompletionItem> {
 
   // in order to update TreeView, followings should be implemented.
   // see: https://code.visualstudio.com/api/extension-guides/tree-view
-  private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | undefined | void> 
-    = new vscode.EventEmitter<vscode.TreeItem | undefined | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | undefined | void> 
-    = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  public  config: any;
+  public config: any;
   private document?: DocObject;
-  private errorMessage:string|undefined = undefined;
+  private errorMessage: string | undefined = undefined;
 
   // hashtag database
   private hashtags: Hashtag[] = [];                   // all hashtags, document order
   private hashtagIds: vscode.CompletionItem[] = [];   // all unique hashtag ids, alphabetical order 
-  private hashtagMentioned  = new Id2Hashtags();
-  private hashtagQuestioned = new Id2Hashtags();
-  private hashtagAnswered   = new Id2Hashtags();
+  private hashtagDB = new TagDB();
+  private diagnostics = vscode.languages.createDiagnosticCollection(EXT_NAME);
 
-  constructor(public workspaceRoot:string, public configPath: string, private diagCollection: vscode.DiagnosticCollection) {
-    this.configPath = path.join(workspaceRoot, this.configPath);
+  constructor() {
   }
 
-  async reload() {
-    console.log('reloading...');
+  dispose() {
+    this.diagnostics.dispose();
+  }
+
+  async scan() {
+    console.log('scanning...');
     try {
-      let start = new Date().getMilliseconds();
-      this.config = yaml.parse(await fs.promises.readFile(this.configPath, 'utf-8'));
+      const start = new Date().getMilliseconds();
+      this.config = yaml.parse(await readTextFile(configFile()!));
+
       if (!this.config.title || !this.config.contents) {
         throw new Error("Invalid config file");
       }
       this.document = obj2doc(this, this.config.contents);
       this.hashtags = [];
-      this.hashtagMentioned.clear();
-      this.hashtagQuestioned.clear();
-      this.hashtagAnswered.clear();
-
-      let tagIds = new Set<string>();
+      this.hashtagDB.clear();
+      const tagIds = new Set<string>();
       // DocFile.totalDocNum = 0;
       await Promise.all(allFiles(this.document).map(
-          async (file: DocFile)=> {
-            let hashtags = await file.scan();
-            // console.log(`adding ${hashtags.length} hashtags`);
-            this.hashtags.push(...hashtags);
-            for(var t of hashtags) {
-              tagIds.add(t.id);
-              switch(t.kind) {
-                case HashtagKind.mentioned:
-                  this.hashtagMentioned.add(t.id, t);
-                  break;
-                case HashtagKind.quenstioned:
-                  this.hashtagQuestioned.add(t.id, t);
-                  break;
-                case HashtagKind.answered:
-                  this.hashtagAnswered.add(t.id, t);
-                  break;
-              }
-            }
-      }));
-      this.hashtagIds = Array.from(tagIds).sort().map((n:string) => new vscode.CompletionItem(n));
+        async (file: DocFile) => {
+          const hashtags = await file.scan();
+          // console.log(`adding ${hashtags.length} hashtags`);
+          this.hashtags.push(...hashtags);
+          for (let t of hashtags) {
+            tagIds.add(t.id);
+            this.hashtagDB.insert(t);
+          }
+        }));
+      this.hashtagIds = Array.from(tagIds).sort().map((n: string) => new vscode.CompletionItem(n));
       this.checkHashtags();
       this.errorMessage = undefined;
-      let duration = new Date().getMilliseconds() - start;
+      const duration = new Date().getMilliseconds() - start;
       console.log(`Scanned document in ${duration} ms.`);
-    } catch(error) {
+    } catch (error) {
       console.error(`Error reading ${this.config}: ${error}`);
       // will be shown in the view panel
       this.errorMessage = `Error scanning document: ${error}`;
     };
-    let watchFiles = [this.configPath, ...this.getFilePaths(false)];
+
+    const watchFiles = [configFile()!.fsPath, ...this.getFilePaths(false)];
     const watcher = chokidar.watch(watchFiles);
     console.log(`watching ${watchFiles.length} files.`);
-    watcher.on('change',async (file) => {
+    watcher.on('change', async (file) => {
       watcher.close();
       console.log(`File ${file} changed.`);
       await promisify(setTimeout)(100);
-      this.reload();
+      this.scan();
     });
+
     this._onDidChangeTreeData.fire(undefined);
   }
 
   checkHashtags() {
-    this.diagCollection.clear();
-    let diagMap: Map<string, vscode.Diagnostic[]> = new Map();
-    for(const t of this.hashtags) {
-      let message:string|undefined;
-      let severity:vscode.DiagnosticSeverity|undefined;
-      switch(t.kind) {
+    this.diagnostics.clear();
+    const diagMap: Map<string, vscode.Diagnostic[]> = new Map();
+    for (const t of this.hashtags) {
+      let message: string | undefined;
+      let severity: vscode.DiagnosticSeverity | undefined;
+      switch (t.kind) {
         case HashtagKind.mentioned:
           break;
         case HashtagKind.quenstioned:
-          let questions = this.hashtagQuestioned.get(t.id);
-          if (questions && questions.length>1 && questions[0]!==t) {
-            message = 'duplicate question';
-            severity = vscode.DiagnosticSeverity.Information;
-          }
-          if (!this.hashtagAnswered.has(t.id)) {
-            message = 'not answered';
-            severity = vscode.DiagnosticSeverity.Error;
-          }
-          break;
-        case HashtagKind.answered:
-          let answers = this.hashtagAnswered.get(t.id);
-          if (answers && answers.length>1 && answers[0]!==t) {
-            message = 'duplicated answer';
-            severity = vscode.DiagnosticSeverity.Warning;
-          }
-          if (this.hashtagQuestioned.has(t.id)) {
-            let questions = this.hashtagQuestioned.get(t.id);
-            if (!questions?.[questions.length-1].precede(t)) {
-              message = 'answer before question';
+          {
+            if (this.hashtagDB.ifExistBefore(t.kind, t.id, t)) {
+              message = 'duplicate question';
+              severity = vscode.DiagnosticSeverity.Information;
+            }
+            const answers = this.hashtagDB.query(HashtagKind.answered, t.id);
+            if (!answers || answers.length === 0) {
+              message = 'not answered';
               severity = vscode.DiagnosticSeverity.Error;
             }
-          } else { // no corresponding question
-            message = 'answer without question';
-            severity = vscode.DiagnosticSeverity.Error;
           }
+          break;
+        case HashtagKind.answered: 
+          {
+            if (this.hashtagDB.ifExistBefore(HashtagKind.answered, t.id, t)) {
+              message = 'duplicate answer';
+              severity = vscode.DiagnosticSeverity.Warning;
+            }
+            if (!this.hashtagDB.ifExistBefore(HashtagKind.quenstioned, t.id, t)) {
+              message = 'no question before answer';
+              severity = vscode.DiagnosticSeverity.Error;
+            }
+          }
+          break;
       }
       if (message) {
-        let diagnostics = diagMap.get(t.docFile.filename);
-        if (!diagnostics) { diagnostics = []; }
+        const diagnostics = diagMap.get(t.docFile.filename) ?? [];
         diagnostics.push(new vscode.Diagnostic(t.range, message, severity));
         diagMap.set(t.docFile.filename, diagnostics);
-        switch(severity) {
+        switch (severity) {
           case vscode.DiagnosticSeverity.Warning:
             t.setWarning(message);
             break;
@@ -142,7 +133,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
 
     }
     diagMap.forEach((diags, docfile) => {
-      this.diagCollection.set(vscode.Uri.file(docfile), diags);
+      this.diagnostics.set(Uri.file(docfile), diags);
     });
   }
 
@@ -169,7 +160,7 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
     if (!element) {
       // return root
       return Promise.resolve(this.document);
-    } 
+    }
     return Promise.resolve(element.getChildren());
   }
 
@@ -178,35 +169,83 @@ export class FictionModel implements vscode.TreeDataProvider<Object>, vscode.Com
    * @param relative if true, returns path strings relative to workspace
    * @returns paths of all document files 
    */
-  getFilePaths(relative:boolean = false): string[] {
+  getFilePaths(relative: boolean = false): string[] {
     if (!this.document) {
       return [];
     } else {
-      return allFiles(this.document).map((file: DocFile) => 
-        (relative && file.filename.startsWith(this.workspaceRoot))? 
-          file.filename.substring(this.workspaceRoot.length+1) 
+      const homePath = homeDir()!.fsPath;
+      return allFiles(this.document).map((file: DocFile) =>
+        (relative && file.filename.startsWith(homePath)) ?
+          file.filename.substring(homePath.length + 1)
           : file.filename);
     }
   }
 
   // CompletionItemProvider
-  provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, 
+  provideCompletionItems(document: vscode.TextDocument, position: vscode.Position,
     token: vscode.CancellationToken, context: vscode.CompletionContext) {
 
     // check if it is in comment line 
     if (document.lineAt(position).text.match(/<!--(.*?)-->/)) {
       return this.hashtagIds;
-     } else {
-       return [];
-     }
+    } else {
+      return [];
+    }
   }
 }
 
-type DocObject = (DocSection|DocFile)[];
+class TagDB {
+  // indexes
+  private db: Map<HashtagKind, Map<string, Hashtag[]>>;
+
+  constructor() {
+    this.db = new Map();
+  }
+
+  clear() {
+    this.db.clear();
+  }
+
+  // index functions
+  insert(tag: Hashtag) {
+    if (!this.db.get(tag.kind)) {
+      this.db.set(tag.kind, new Map());
+    }
+    if (!this.db.get(tag.kind)!.get(tag.id)) {
+      this.db.get(tag.kind)!.set(tag.id, []);
+    }
+    this.db.get(tag.kind)?.get(tag.id)?.push(tag);
+  }
+
+  query(kind: HashtagKind, id: string) {
+    return this.db.get(kind)?.get(id);
+  }
+
+  ifExist(kind: HashtagKind, id: string): boolean {
+    let tags = this.query(kind, id);
+    return (tags!==undefined && tags.length>0);
+  }
+
+  ifExistBefore(kind: HashtagKind, id: string, t: Hashtag): boolean {
+    let tags = this.query(kind, id);
+    if (tags===undefined) {
+      return false;
+    }
+    for(let t1 of tags) {
+      if (t1.precede(t)) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+
+type DocObject = (DocSection | DocFile)[];
 
 
 function obj2doc(model: FictionModel, obj: any): DocObject {
-  if (typeof(obj)==="string") { // single file pattern
+  if (typeof (obj) === "string") { // single file pattern
     // contents:
     //   file_pattern
     return path2files(model, obj);
@@ -214,61 +253,61 @@ function obj2doc(model: FictionModel, obj: any): DocObject {
     // contents:
     //   - file_pattern_1
     //   - file_pattern_2
-    let children: DocObject = [];
-    for(let c of obj) {
-      if (typeof(c)==="string") { 
-        children.push(...path2files(model,c)); 
+    const children: DocObject = [];
+    for (let c of obj) {
+      if (typeof (c) === "string") {
+        children.push(...path2files(model, c));
       } else {
         children.push(...obj2doc(model, c));
       }
     }
     return children;
     // return obj.flatMap((path: string)=>path2files(model, path));
-  } else if (typeof(obj)==="object") {
+  } else if (typeof (obj) === "object") {
     // chapter_1:
     //   content list
     // chapter_2:
     //   content list
-    return Object.entries(obj).map(([title, content])=>new DocSection(model, title, obj2doc(model, content)));
+    return Object.entries(obj).map(([title, content]) => new DocSection(model, title, obj2doc(model, content)));
   }
   throw new Error(`Cannot parse ${obj} in config file.`);
 }
 
 function path2files(model: FictionModel, filepath: string): DocFile[] {
-  return glob.sync(path.join(model.workspaceRoot,filepath))
-          .map((filename)=>new DocFile(model, filename));
+  return glob.sync(path.join(homeDir()!.fsPath, filepath))
+    .map((filename) => new DocFile(model, filename));
 }
 
 function allFiles(contents: DocObject): DocFile[] {
-  if (!contents.length) { 
-    return []; 
+  if (!contents.length) {
+    return [];
   } else {
-    let files:DocFile[] = [];
-    for(let obj of contents) {
+    const files: DocFile[] = [];
+    for (let obj of contents) {
       if (obj instanceof DocFile) {
         files.push(obj);
       } else {
         files.push(...allFiles(obj.content));
       }
     }
-    return files; 
+    return files;
   }
 }
 
 // Container object that holds DocObject. Corresponds to chapters, sections, etc. 
 class DocSection {
-  constructor(public model:FictionModel, public title:string, public content:DocObject) {
+  constructor(public model: FictionModel, public title: string, public content: DocObject) {
   }
 
   getTreeItem(): vscode.TreeItem {
-    let item = new vscode.TreeItem(this.title, vscode.TreeItemCollapsibleState.Expanded);
+    const item = new vscode.TreeItem(this.title, vscode.TreeItemCollapsibleState.Expanded);
     // item.iconPath = new vscode.ThemeIcon("folder");
     item.iconPath = vscode.ThemeIcon.Folder;
     return item;
   }
 
   getChildren(): any[] {
-    return this.content??[];
+    return this.content ?? [];
   }
 }
 
@@ -277,17 +316,18 @@ class DocFile {
   public static totalDocNum: number = 0;
   docNum: number = 0;
   hashtags: Hashtag[] = [];
-  private scannedTitle: string|undefined = undefined;
+  private scannedTitle: string | undefined = undefined;
 
-  constructor(public model: FictionModel, public filename: string, public givenTitle?:string) {
+  constructor(public model: FictionModel, public filename: string, public givenTitle?: string) {
     this.docNum = DocFile.totalDocNum;
+    this.filename = path.normalize(this.filename);
     DocFile.totalDocNum++;
   }
 
   getTreeItem(): vscode.TreeItem {
-    let errors=0;
-    let warnings=0;
-    for(var t of this.hashtags) {
+    let errors = 0;
+    let warnings = 0;
+    for (var t of this.hashtags) {
       if (t.error) {
         errors++;
       }
@@ -295,7 +335,7 @@ class DocFile {
         warnings++;
       }
     }
-    let title=this.getTitle();
+    let title = this.getTitle();
     let titleOrigLen = title.length;
     if (warnings) {
       title += ` W${warnings}`;
@@ -303,20 +343,20 @@ class DocFile {
     if (errors) {
       title += ` E${errors}`;
     }
-    let label = (title===this.getTitle())?
-       title:
-       <vscode.TreeItemLabel> {label: title, highlights: [[titleOrigLen+1, title.length]]};
+    let label = (title === this.getTitle()) ?
+      title :
+      <vscode.TreeItemLabel>{ label: title, highlights: [[titleOrigLen + 1, title.length]] };
     let item = new vscode.TreeItem(
       label,
-      (this.hashtags.length>0)? 
-        vscode.TreeItemCollapsibleState.Collapsed : 
+      (this.hashtags.length > 0) ?
+        vscode.TreeItemCollapsibleState.Collapsed :
         vscode.TreeItemCollapsibleState.None);
-    item.resourceUri = vscode.Uri.file(this.filename);
+    item.resourceUri = Uri.file(this.filename);
     item.id = this.filename;
     item.iconPath = vscode.ThemeIcon.File;
     item.command = {
       title: "",
-      command: 'fictioner.open',
+      command: EXT_NAME + '.open',
       arguments: [this.filename]
     } as vscode.Command;
     return item;
@@ -328,17 +368,17 @@ class DocFile {
 
   async scan(): Promise<Hashtag[]> {
     const hashtags: Hashtag[] = [];
-    const text = await fs.promises.readFile(this.filename, "utf-8");
+    const text = Buffer.from(await vscode.workspace.fs.readFile(Uri.file(this.filename))).toString('utf8');
     let lineno = 0;
     this.scannedTitle = undefined;
-    for(const line of text.split(/\r\n|\n\r|\n|\r/g)) { // for each line
+    for (const line of text.split(/\r\n|\n\r|\n|\r/g)) { // for each line
       let m;
-      if (m=/^#+\s+(.*)$/gu.exec(line)) {
+      if (m = /^#+\s+(.*)$/gu.exec(line)) {
         this.scannedTitle = m[1];
       } else {
-        if (/<!--(.*?)-->/gu.test(line)){
-          for(let m of line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu)) {
-            hashtags.push(new Hashtag(this, lineno, m.index??0, m[0]));
+        if (/<!--(.*?)-->/gu.test(line)) {
+          for (let m of line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu)) {
+            hashtags.push(new Hashtag(this, lineno, m.index ?? 0, m[0]));
           }
         }
       }
@@ -363,16 +403,16 @@ class DocFile {
 
 class Location {
   constructor(
-      public file: DocFile,
-      public lineno: number) {
+    public file: DocFile,
+    public lineno: number) {
   }
   toString(): string {
-      return this.file.filename + ":" + this.lineno;
+    return this.file.filename + ":" + this.lineno;
   }
 }
 
 enum HashtagKind {
-  mentioned, 
+  mentioned,
   quenstioned,
   answered,
 }
@@ -380,9 +420,9 @@ enum HashtagKind {
 class Id2Hashtags extends Map<string, Array<Hashtag>> {
   add(id: string, tag: Hashtag) {
     if (this.has(id)) {
-        this.get(id)?.push(tag);
+      this.get(id)?.push(tag);
     } else {
-        this.set(id, [tag]);
+      this.set(id, [tag]);
     }
   }
 };
@@ -391,49 +431,49 @@ export class Hashtag {
   public kind: HashtagKind;
   public id: string;
   public loc: Location;
-  public error: string|undefined=undefined;
-  public warning: string|undefined=undefined;
+  public error: string | undefined = undefined;
+  public warning: string | undefined = undefined;
 
   constructor(public docFile: DocFile, public lineno: number, public column: number, public token: string) {
     this.loc = new Location(docFile, lineno);
     if (token.endsWith('?')) {
       this.kind = HashtagKind.quenstioned;
-      this.id = token.substr(1, token.length-2);
+      this.id = token.substr(1, token.length - 2);
     } else if (token.endsWith('!')) {
       this.kind = HashtagKind.answered;
-      this.id = token.substr(1, token.length-2);
+      this.id = token.substr(1, token.length - 2);
     } else {
       this.kind = HashtagKind.mentioned;
       this.id = token.substr(1);
     }
   }
 
-  getTreeItem():vscode.TreeItem {
+  getTreeItem(): vscode.TreeItem {
     var title = this.token;
 
     var tooltip = "";
 
-    let item = new vscode.TreeItem(title);
+    const item = new vscode.TreeItem(title);
 
     if (this.warning) {
       // title += '  '+WARNING_SIGN;
-      item.iconPath = new vscode.ThemeIcon('warning', 
+      item.iconPath = new vscode.ThemeIcon('warning',
         new vscode.ThemeColor('list.warningForeground'));
       tooltip += this.warning;
     }
     if (this.error) {
       // title += '  '+ERROR_SIGN;
-      item.iconPath = new vscode.ThemeIcon('error', 
-      new vscode.ThemeColor('list.errorForeground'));
+      item.iconPath = new vscode.ThemeIcon('error',
+        new vscode.ThemeColor('list.errorForeground'));
       tooltip += this.error;
     }
     item.tooltip = tooltip;
     item.contextValue = 'hashtag';
     item.command = {
       title: "",
-      command: 'fictioner.openAndSelect',
-      arguments: [this.docFile.filename, 
-        new vscode.Range(new vscode.Position(this.loc.lineno, 0), new vscode.Position(this.loc.lineno,0))]
+      command: EXT_NAME + '.openAndSelect',
+      arguments: [this.docFile.filename,
+      new vscode.Range(new vscode.Position(this.loc.lineno, 0), new vscode.Position(this.loc.lineno, 0))]
     } as vscode.Command;
     return item;
   }
@@ -444,8 +484,8 @@ export class Hashtag {
 
   precede(another: Hashtag) {
     return this.docFile.docNum < another.docFile.docNum ||
-        (this.docFile.docNum===another.docFile.docNum &&
-         this.lineno < another.lineno);
+      (this.docFile.docNum === another.docFile.docNum &&
+        this.lineno < another.lineno);
   }
 
   setError(message: string) {
@@ -456,8 +496,8 @@ export class Hashtag {
     this.warning = message;
   }
 
-  get range():vscode.Range {
-    return new vscode.Range(this.lineno, this.column, this.lineno, this.column+this.token.length);
+  get range(): vscode.Range {
+    return new vscode.Range(this.lineno, this.column, this.lineno, this.column + this.token.length);
   }
 }
 

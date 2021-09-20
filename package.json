@@ -44,6 +44,11 @@
 				"command": "fictioner.searchtag",
 				"title": "Fictioner: Search Tag",
 				"icon": "$(search)"
+			},
+			{
+				"command": "fictioner.analytics",
+				"title": "Fictioner: Analytics",
+				"icon": "$(open-preview)"
 			}
 		],
 		"views": {
