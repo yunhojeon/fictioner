@@ -24,7 +24,7 @@ export class FictionModel implements
   // hashtag database
   private hashtags: Hashtag[] = [];                   // all hashtags, document order
   private hashtagIds: vscode.CompletionItem[] = [];   // all unique hashtag ids, alphabetical order 
-  private hashtagDB = new TagDB();
+  public  hashtagDB = new TagDB();
   private diagnostics = vscode.languages.createDiagnosticCollection(EXT_NAME);
 
   constructor() {
@@ -97,8 +97,7 @@ export class FictionModel implements
               message = 'duplicate question';
               severity = vscode.DiagnosticSeverity.Information;
             }
-            const answers = this.hashtagDB.query(HashtagKind.answered, t.id);
-            if (!answers || answers.length === 0) {
+            if (!this.hashtagDB.ifExist(HashtagKind.answered, t.id)) {
               message = 'not answered';
               severity = vscode.DiagnosticSeverity.Error;
             }
@@ -217,17 +216,28 @@ class TagDB {
     this.db.get(tag.kind)?.get(tag.id)?.push(tag);
   }
 
-  query(kind: HashtagKind, id: string) {
-    return this.db.get(kind)?.get(id);
+  query(id: string, kind?: HashtagKind): Hashtag[] | undefined {
+    if (kind) {
+      return this.db.get(kind)?.get(id);
+    } else {
+      // match regardless of kind
+      let matches: Hashtag[] = [];
+      for(let tags of this.db.values()) {
+        if (tags.has(id)) {
+          matches.push(...tags.get(id)!);
+        }
+      }
+      return (matches.length>0)? matches:undefined;
+    }
   }
 
   ifExist(kind: HashtagKind, id: string): boolean {
-    let tags = this.query(kind, id);
+    let tags = this.query(id, kind);
     return (tags!==undefined && tags.length>0);
   }
 
   ifExistBefore(kind: HashtagKind, id: string, t: Hashtag): boolean {
-    let tags = this.query(kind, id);
+    let tags = this.query(id, kind);
     if (tags===undefined) {
       return false;
     }
@@ -369,20 +379,28 @@ class DocFile {
   async scan(): Promise<Hashtag[]> {
     const hashtags: Hashtag[] = [];
     const text = Buffer.from(await vscode.workspace.fs.readFile(Uri.file(this.filename))).toString('utf8');
-    let lineno = 0;
+    const lines = text.split(/\r\n|\n\r|\n|\r/g);
+    // const lines = text.split("\n");
     this.scannedTitle = undefined;
-    for (const line of text.split(/\r\n|\n\r|\n|\r/g)) { // for each line
-      let m;
-      if (m = /^#+\s+(.*)$/gu.exec(line)) {
+    for (let lineno=0; lineno<lines.length; lineno++) {
+      const line = lines[lineno];
+      let m = /^#+\s+(.*)$/gu.exec(line);
+      if (m) {
         this.scannedTitle = m[1];
       } else {
         if (/<!--(.*?)-->/gu.test(line)) {
-          for (let m of line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu)) {
-            hashtags.push(new Hashtag(this, lineno, m.index ?? 0, m[0]));
+          let matches=Array.from(line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu));
+          if (matches.length>0) {
+            let text = "";
+            for(let j=lineno; j<lines.length && text.length<300; j++) {
+              text += lines[j] + "\n";
+            }
+            for(let tag of matches) {
+              hashtags.push(new Hashtag(this, lineno, tag.index??0, tag[0], text));
+            }
           }
         }
       }
-      lineno++;
     }
     this.hashtags = hashtags;
     // console.log(`scanned ${this.filename}, found ${promises.length} tags`);
@@ -428,13 +446,14 @@ class Id2Hashtags extends Map<string, Array<Hashtag>> {
 };
 
 export class Hashtag {
+  
   public kind: HashtagKind;
   public id: string;
   public loc: Location;
-  public error: string | undefined = undefined;
-  public warning: string | undefined = undefined;
+  public error?: string;
+  public warning?: string;
 
-  constructor(public docFile: DocFile, public lineno: number, public column: number, public token: string) {
+  constructor(public docFile: DocFile, public lineno: number, public column: number, public token: string, public contextText: string) {
     this.loc = new Location(docFile, lineno);
     if (token.endsWith('?')) {
       this.kind = HashtagKind.quenstioned;
@@ -483,9 +502,26 @@ export class Hashtag {
   }
 
   precede(another: Hashtag) {
-    return this.docFile.docNum < another.docFile.docNum ||
-      (this.docFile.docNum === another.docFile.docNum &&
-        this.lineno < another.lineno);
+    // return this.docFile.docNum < another.docFile.docNum ||
+    //   (this.docFile.docNum === another.docFile.docNum &&
+    //     this.lineno < another.lineno);
+    return this.compare(another)<0;
+  }
+
+  compare(another: Hashtag):number {
+    if (this.docFile.docNum < another.docFile.docNum) {
+      return -1;
+    } else if (this.docFile.docNum > another.docFile.docNum) {
+      return 1;
+    } else {
+      if (this.lineno < another.lineno) {
+        return -1;
+      } else if (this.lineno > another.lineno) {
+        return 1;
+      } else {
+        return 0;
+      }
+    }
   }
 
   setError(message: string) {

@@ -78,17 +78,18 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	// analytics view
-	const analViewUri = Uri.parse(EXT_NAME + ":( Fiction Analysis ).md");
-	const vdocProvider = new Analytics(analViewUri);
-
-	disposables.push(workspace.registerTextDocumentContentProvider(EXT_NAME, vdocProvider));
 	regCmd('fictioner.analytics', async () => {
 		const doc = await workspace.openTextDocument(analViewUri);
-		await window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside });
+		window.showTextDocument(doc, { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
 	});
 	
 	model = new FictionModel();
+
+	// analytics view
+	const analViewUri = Uri.parse(EXT_NAME + ":( Fiction Analysis ).md");
+	const vdocProvider = new Analytics(analViewUri, model);
+	disposables.push(workspace.registerTextDocumentContentProvider(EXT_NAME, vdocProvider));
+
 	disposables.push(model);
 
 	await model.scan();
