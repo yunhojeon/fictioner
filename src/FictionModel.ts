@@ -392,11 +392,14 @@ class DocFile {
           let matches=Array.from(line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu));
           if (matches.length>0) {
             let text = "";
-            for(let j=lineno; j<lines.length && text.length<300; j++) {
+            for(let j=lineno+1; j<lines.length && text.length<200; j++) {
+              if (text.trim().length>2 && lines[j].trim().length===0) {
+                break; // break when line is empty and gathered text is not
+              }
               text += lines[j] + "\n";
             }
             for(let tag of matches) {
-              hashtags.push(new Hashtag(this, lineno, tag.index??0, tag[0], text));
+              hashtags.push(new Hashtag(this, lineno, tag.index??0, tag[0], text, line));
             }
           }
         }
@@ -453,7 +456,13 @@ export class Hashtag {
   public error?: string;
   public warning?: string;
 
-  constructor(public docFile: DocFile, public lineno: number, public column: number, public token: string, public contextText: string) {
+  constructor(
+    public docFile: DocFile, 
+    public lineno: number, 
+    public column: number, 
+    public token: string, 
+    public contextText: string,
+    public tagLine: string) {
     this.loc = new Location(docFile, lineno);
     if (token.endsWith('?')) {
       this.kind = HashtagKind.quenstioned;

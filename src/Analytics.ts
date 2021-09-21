@@ -66,7 +66,8 @@ export class Analytics implements vscode.TextDocumentContentProvider {
                 output += "======================================\n\n";
             } else {
                 let filename = vscode.workspace.asRelativePath(t.docFile.filename);
-                output += `<${filename}: ${t.lineno}>\n${t.contextText}\n`;
+                let tags = t.tagLine.match(/<!--(.*?)-->/)?.[1]; // whatever is inside comment
+                output += `<${filename}: ${t.lineno} ${tags}>\n${t.contextText}\n`;
             }
 
         }
