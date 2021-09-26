@@ -3,3 +3,4 @@ dist
 node_modules
 .vscode-test/
 *.docx
+fictioner-0.1.0.vsix

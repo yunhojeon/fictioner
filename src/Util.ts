@@ -5,7 +5,7 @@ import * as vscode from "vscode";
 export async function readTextFile(file: vscode.Uri ): Promise<string> {
     let content = await vscode.workspace.fs.readFile(file);
     // return Buffer.from(f).toString('utf8');
-    return new TextDecoder('utf8').decode(content);
+    return new TextDecoder().decode(content);
 } 
 
 export async function writeTextFile(file: vscode.Uri, content: string) {

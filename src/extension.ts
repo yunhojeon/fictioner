@@ -1,15 +1,18 @@
 import * as vscode from 'vscode';
 import { Uri, window, workspace } from 'vscode';
 import { FictionModel, Hashtag } from './FictionModel';
-import { Analytics } from './Analytics';
+import { AnalyticsView } from './Analytics';
 import { readTextFile, writeTextFile, formatString } from './Util';
 
 
 const CONFIG_FILE = "fictioner.yml";
 export const EXT_NAME = "fictioner";
-const analViewUri = Uri.parse(EXT_NAME + ":( Fiction Analysis ).md");
+
+// const analViewUri = Uri.parse(EXT_NAME + ":( Fiction Analysis ).md");
+// export let analyticsView: vscode.WebviewPanel | undefined;
 
 let model: FictionModel;
+let analyticsView: AnalyticsView;
 
 export function homeDir(): Uri | undefined {
 	return workspace?.workspaceFolders?.[0].uri;
@@ -81,17 +84,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	regCmd('fictioner.analytics', async () => {
 		openAnalytics();
-		const doc = await workspace.openTextDocument(analViewUri);
-		window.showTextDocument(doc, { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
+		// const doc = await workspace.openTextDocument(analViewUri);
+		// window.showTextDocument(doc, { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
 	});
 	
 	model = new FictionModel();
 
 	// analytics view
 
-	const vdocProvider = new Analytics(analViewUri, model);
-	disposables.push(workspace.registerTextDocumentContentProvider(EXT_NAME, vdocProvider));
-
+	// const vdocProvider = new Analytics(analViewUri, model);
+	// disposables.push(workspace.registerTextDocumentContentProvider(EXT_NAME, vdocProvider));
+	analyticsView = new AnalyticsView(context, model);
 	disposables.push(model);
 
 	await model.scan();
@@ -107,16 +110,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		'markdown', model, '#'
 	));
 
-	const ANALVIEW_KEY = 'analyticsView';
-	disposables.push(vscode.window.onDidChangeVisibleTextEditors((editors:vscode.TextEditor[])=>{
-		// to remember open state of analytics view
-		let isAnalyticsOpen = 
-			editors.find(e=>e.document.uri.scheme===EXT_NAME)!==undefined;
-		context.workspaceState.update(ANALVIEW_KEY, isAnalyticsOpen);
-	}));
-	if (context.workspaceState.get(ANALVIEW_KEY)) {
-		openAnalytics();
-	}
 
 	context.subscriptions.concat(disposables);
 
@@ -142,11 +135,10 @@ function openConfig() {
 }
 
 async function openAnalytics() {
-	const doc = await workspace.openTextDocument(analViewUri);
-	window.showTextDocument(doc, { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
+	// const doc = await workspace.openTextDocument(analViewUri);
+	// window.showTextDocument(doc, { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
+	analyticsView.show();
 }
-
-
 
 const configTemplate = `# Fictioner sample config file
 title: {title}

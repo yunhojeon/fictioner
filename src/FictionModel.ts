@@ -24,7 +24,7 @@ export class FictionModel implements
   // hashtag database
   private hashtags: Hashtag[] = [];                   // all hashtags, document order
   private hashtagIds: vscode.CompletionItem[] = [];   // all unique hashtag ids, alphabetical order 
-  public  hashtagDB = new TagDB();
+  public hashtagDB = new TagDB();
   private diagnostics = vscode.languages.createDiagnosticCollection(EXT_NAME);
 
   constructor() {
@@ -72,7 +72,7 @@ export class FictionModel implements
     const watchFiles = [configFile()!.fsPath, ...this.getFilePaths(false)];
     const watcher = chokidar.watch(watchFiles);
     console.log(`watching ${watchFiles.length} files.`);
-    watcher.on('change', async (file) => {
+    watcher.on('change', async (file: string) => {
       watcher.close();
       console.log(`File ${file} changed.`);
       await promisify(setTimeout)(100);
@@ -103,7 +103,7 @@ export class FictionModel implements
             }
           }
           break;
-        case HashtagKind.answered: 
+        case HashtagKind.answered:
           {
             if (this.hashtagDB.ifExistBefore(HashtagKind.answered, t.id, t)) {
               message = 'duplicate answer';
@@ -222,26 +222,26 @@ class TagDB {
     } else {
       // match regardless of kind
       let matches: Hashtag[] = [];
-      for(let tags of this.db.values()) {
+      for (let tags of this.db.values()) {
         if (tags.has(id)) {
           matches.push(...tags.get(id)!);
         }
       }
-      return (matches.length>0)? matches:undefined;
+      return (matches.length > 0) ? matches : undefined;
     }
   }
 
   ifExist(kind: HashtagKind, id: string): boolean {
     let tags = this.query(id, kind);
-    return (tags!==undefined && tags.length>0);
+    return (tags !== undefined && tags.length > 0);
   }
 
   ifExistBefore(kind: HashtagKind, id: string, t: Hashtag): boolean {
     let tags = this.query(id, kind);
-    if (tags===undefined) {
+    if (tags === undefined) {
       return false;
     }
-    for(let t1 of tags) {
+    for (let t1 of tags) {
       if (t1.precede(t)) {
         return true;
       }
@@ -278,7 +278,10 @@ function obj2doc(model: FictionModel, obj: any): DocObject {
     //   content list
     // chapter_2:
     //   content list
-    return Object.entries(obj).map(([title, content]) => new DocSection(model, title, obj2doc(model, content)));
+    return Object.entries(obj).map(
+      ([title, content]) =>
+        new DocSection(model, title, obj2doc(model, content))
+    );
   }
   throw new Error(`Cannot parse ${obj} in config file.`);
 }
@@ -382,24 +385,24 @@ class DocFile {
     const lines = text.split(/\r\n|\n\r|\n|\r/g);
     // const lines = text.split("\n");
     this.scannedTitle = undefined;
-    for (let lineno=0; lineno<lines.length; lineno++) {
+    for (let lineno = 0; lineno < lines.length; lineno++) {
       const line = lines[lineno];
       let m = /^#+\s+(.*)$/gu.exec(line);
       if (m) {
         this.scannedTitle = m[1];
       } else {
         if (/<!--(.*?)-->/gu.test(line)) {
-          let matches=Array.from(line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu));
-          if (matches.length>0) {
+          let matches = Array.from(line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu));
+          if (matches.length > 0) {
             let text = "";
-            for(let j=lineno+1; j<lines.length && text.length<200; j++) {
-              if (text.trim().length>2 && lines[j].trim().length===0) {
+            for (let j = lineno + 1; j < lines.length && text.length < 200; j++) {
+              if (text.trim().length > 2 && lines[j].trim().length === 0) {
                 break; // break when line is empty and gathered text is not
               }
               text += lines[j] + "\n";
             }
-            for(let tag of matches) {
-              hashtags.push(new Hashtag(this, lineno, tag.index??0, tag[0], text, line));
+            for (let tag of matches) {
+              hashtags.push(new Hashtag(this, lineno, tag.index ?? 0, tag[0], text, line));
             }
           }
         }
@@ -449,7 +452,7 @@ class Id2Hashtags extends Map<string, Array<Hashtag>> {
 };
 
 export class Hashtag {
-  
+
   public kind: HashtagKind;
   public id: string;
   public loc: Location;
@@ -457,10 +460,10 @@ export class Hashtag {
   public warning?: string;
 
   constructor(
-    public docFile: DocFile, 
-    public lineno: number, 
-    public column: number, 
-    public token: string, 
+    public docFile: DocFile,
+    public lineno: number,
+    public column: number,
+    public token: string,
     public contextText: string,
     public tagLine: string) {
     this.loc = new Location(docFile, lineno);
@@ -514,10 +517,10 @@ export class Hashtag {
     // return this.docFile.docNum < another.docFile.docNum ||
     //   (this.docFile.docNum === another.docFile.docNum &&
     //     this.lineno < another.lineno);
-    return this.compare(another)<0;
+    return this.compare(another) < 0;
   }
 
-  compare(another: Hashtag):number {
+  compare(another: Hashtag): number {
     if (this.docFile.docNum < another.docFile.docNum) {
       return -1;
     } else if (this.docFile.docNum > another.docFile.docNum) {
