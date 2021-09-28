@@ -26,6 +26,7 @@ export class FictionModel implements
   private hashtagIds: vscode.CompletionItem[] = [];   // all unique hashtag ids, alphabetical order 
   public hashtagDB = new TagDB();
   private diagnostics = vscode.languages.createDiagnosticCollection(EXT_NAME);
+  totalChars = 0;
 
   constructor() {
   }
@@ -47,20 +48,23 @@ export class FictionModel implements
       this.hashtags = [];
       this.hashtagDB.clear();
       const tagIds = new Set<string>();
-      // DocFile.totalDocNum = 0;
-      await Promise.all(allFiles(this.document).map(
-        async (file: DocFile) => {
-          const hashtags = await file.scan();
-          // console.log(`adding ${hashtags.length} hashtags`);
-          this.hashtags.push(...hashtags);
-          for (let t of hashtags) {
-            tagIds.add(t.id);
-            this.hashtagDB.insert(t);
-          }
-        }));
+      let offset = 0;
+      this.totalChars = 0;
+      for (let file of allFiles(this.document)) {
+        file.offset = offset;
+        const [hashtags, numChars] = await file.scan();
+        // console.log(`adding ${hashtags.length} hashtags`);
+        offset += numChars;
+        this.hashtags.push(...hashtags);
+        for (let t of hashtags) {
+          tagIds.add(t.id);
+          this.hashtagDB.insert(t);
+        }
+      }
       this.hashtagIds = Array.from(tagIds).sort().map((n: string) => new vscode.CompletionItem(n));
       this.checkHashtags();
       this.errorMessage = undefined;
+      this.totalChars = offset;
       const duration = new Date().getMilliseconds() - start;
       console.log(`Scanned document in ${duration} ms.`);
     } catch (error) {
@@ -329,6 +333,7 @@ class DocFile {
   public static totalDocNum: number = 0;
   docNum: number = 0;
   hashtags: Hashtag[] = [];
+  offset: number = 0;
   private scannedTitle: string | undefined = undefined;
 
   constructor(public model: FictionModel, public filename: string, public givenTitle?: string) {
@@ -379,19 +384,21 @@ class DocFile {
     return this.hashtags;
   }
 
-  async scan(): Promise<Hashtag[]> {
+  async scan(): Promise<[Hashtag[], number]> {
     const hashtags: Hashtag[] = [];
-    const text = Buffer.from(await vscode.workspace.fs.readFile(Uri.file(this.filename))).toString('utf8');
+    const text = await readTextFile(this.filename);
     const lines = text.split(/\r\n|\n\r|\n|\r/g);
     // const lines = text.split("\n");
+    let totalChars = 0;
     this.scannedTitle = undefined;
     for (let lineno = 0; lineno < lines.length; lineno++) {
       const line = lines[lineno];
-      let m = /^#+\s+(.*)$/gu.exec(line);
+      let m = /^#+\s+(.*)$/gu.exec(line); // title line
       if (m) {
         this.scannedTitle = m[1];
+        totalChars += m[1].length +1;
       } else {
-        if (/<!--(.*?)-->/gu.test(line)) {
+        if (/<!--(.*?)-->/gu.test(line)) { // comment line
           let matches = Array.from(line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu));
           if (matches.length > 0) {
             let text = "";
@@ -402,15 +409,18 @@ class DocFile {
               text += lines[j] + "\n";
             }
             for (let tag of matches) {
-              hashtags.push(new Hashtag(this, lineno, tag.index ?? 0, tag[0], text, line));
+              hashtags.push(new Hashtag(this, lineno, tag.index ?? 0, tag[0], text, line, this.offset+totalChars));
             }
           }
+        } else {
+          // normal text line
+          totalChars += line.trim().length+1;
         }
       }
     }
     this.hashtags = hashtags;
     // console.log(`scanned ${this.filename}, found ${promises.length} tags`);
-    return hashtags;
+    return [hashtags, totalChars];
   }
 
   getTitle(): string {
@@ -465,7 +475,8 @@ export class Hashtag {
     public column: number,
     public token: string,
     public contextText: string,
-    public tagLine: string) {
+    public tagLine: string,
+    public globalOffset: number) {
     this.loc = new Location(docFile, lineno);
     if (token.endsWith('?')) {
       this.kind = HashtagKind.quenstioned;
@@ -503,8 +514,7 @@ export class Hashtag {
     item.command = {
       title: "",
       command: EXT_NAME + '.openAndSelect',
-      arguments: [this.docFile.filename,
-      new vscode.Range(new vscode.Position(this.loc.lineno, 0), new vscode.Position(this.loc.lineno, 0))]
+      arguments: [this.docFile.filename, this.loc.lineno]
     } as vscode.Command;
     return item;
   }
@@ -518,6 +528,10 @@ export class Hashtag {
     //   (this.docFile.docNum === another.docFile.docNum &&
     //     this.lineno < another.lineno);
     return this.compare(another) < 0;
+  }
+
+  sameLocation(another: Hashtag) {
+    return this.docFile === another.docFile && this.lineno === another.lineno;
   }
 
   compare(another: Hashtag): number {

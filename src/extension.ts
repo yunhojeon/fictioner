@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Uri, window, workspace } from 'vscode';
 import { FictionModel, Hashtag } from './FictionModel';
 import { AnalyticsView } from './Analytics';
-import { readTextFile, writeTextFile, formatString } from './Util';
+import { readTextFile, writeTextFile, formatString, openAndSelectLine } from './Util';
 
 
 const CONFIG_FILE = "fictioner.yml";
@@ -62,14 +62,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	regCmd('fictioner.openAndSelect', (...args: any[]) => {
-		// console.log(`showing ${args[0]}`);
-		window.showTextDocument(Uri.file(args[0]), { preview: false }).then(
-			(editor: vscode.TextEditor) => {
-				const range = args[1] as vscode.Range;
-				editor.revealRange(range);
-				editor.selection = new vscode.Selection(range.start, range.end);
-			}
-		);
+		const uri = vscode.Uri.file(args[0] as string);
+		openAndSelectLine(uri, args[1] as number);
 	});
 
 	regCmd('fictioner.searchtag', (item: any) => {

@@ -289,6 +289,13 @@ pre code {
 
 </style>
 <body>
+	<script>
+ 	const vscode = acquireVsCodeApi();
+	const openDoc = function(filename, lineno) {
+		console.log("openDoc");
+		vscode.postMessage({command: 'openDoc', filename: filename, lineno: lineno});
+	}
+    </script>
 ${content}
 </body>
 </html>
