@@ -70,7 +70,9 @@ export class AnalyticsView {
             const html = fs.readFile(vscode.Uri.file(
                 path.join(this.context.extensionPath, 'analytics', 'index.html')
             )).then((data: Uint8Array) => {
-                this.panel!.webview.html = data.toString().replace("${content}", this.generateContent()??"");
+                // this.panel!.webview.html = data.toString().replace("${content}", this.generateContent()??"");
+                this.panel!.webview.html = data.toString();
+                this.panel!.webview.postMessage(this.generateContent());
             });
         }
 
@@ -85,10 +87,10 @@ export class AnalyticsView {
         }
     }
 
-    generateContent(): string {
+    generateContent(): any {
         let editor = vscode.window.activeTextEditor;
         if (editor===undefined) {
-            return "";
+            return undefined;
         }
         let pos = editor.selection.start;
         
@@ -114,30 +116,44 @@ export class AnalyticsView {
                 .sort((t1, t2)=>t1.compare(t2))
                 .filter((t, index, tags)=> index===0 || !t.sameLocation(tags[index-1]));
 
-        let output = "";
-        let lastTag: Hashtag | undefined;
+        const totalChars = this.model.totalChars;
 
         return relatedTags.map( (t) => {
             if (t.docFile.filename===editor?.document.fileName && t.lineno===thisTagLine) {
-                return `
-                    <div class="current-location">
-                        Current Position (${t.globalOffset})
-                    </div>`;
+                return { currentLocation: true, position: t.globalOffset/totalChars };
             } else {
-                let filename = vscode.workspace.asRelativePath(t.docFile.filename);
-                let tags = t.tagLine.match(/<!--(.*?)-->/)?.[1]; // whatever is inside comment
-                return ` 
-                    <div class="related-text-header" onclick="openDoc('${filename}', ${t.lineno})">
-                        <div class="tag-link">
-                            ${filename}: ${t.lineno}
-                        </div>
-                        ${tags} (${t.globalOffset})
-                    </div>
-                    <div class="related-text">
-                        ${t.contextText}
-                    </div>`;
-            }})
-            .join(`<div class="related-separator">⋮</div>`) +
-            `<div>total chars = ${this.model.totalChars}`;
+                return {
+                    currentLocation: false,
+                    filename: vscode.workspace.asRelativePath(t.docFile.filename),
+                    lineno: t.lineno,
+                    text: t.contextText,
+                    position: t.globalOffset/totalChars,
+                    tags: t.tagLine.match(/<!--(.*?)-->/)?.[1] // whatever is inside comment
+                };
+            }
+        });
+
+        //  return relatedTags.map( (t) => {
+        //     if (t.docFile.filename===editor?.document.fileName && t.lineno===thisTagLine) {
+        //         return `
+        //             <div class="current-location">
+        //                 Current Position (${t.globalOffset})
+        //             </div>`;
+        //     } else {
+        //         let filename = vscode.workspace.asRelativePath(t.docFile.filename);
+        //         let tags = t.tagLine.match(/<!--(.*?)-->/)?.[1]; // whatever is inside comment
+        //         return ` 
+        //             <div class="related-text-header" onclick="openDoc('${filename}', ${t.lineno})">
+        //                 <div class="tag-link">
+        //                     ${filename}: ${t.lineno}
+        //                 </div>
+        //                 ${tags} (${t.globalOffset})
+        //             </div>
+        //             <div class="related-text">
+        //                 ${t.contextText}
+        //             </div>`;
+        //     }})
+        //     .join(`<div class="related-separator">⋮</div>`) +
+        //     `<div>total chars = ${this.model.totalChars}</div>`;
     }
 }

@@ -276,26 +276,144 @@ pre code {
 	/* background-color: red; */
 	color: var(--vscode-selectionForeground);
 	background-color: var(--vscode-editor-selectionBackground);
-	margin-bottom: 1em;
-	margin-top: 1em;
+	margin-bottom: 0.5em;
+	margin-top: 0.5em;
 	text-align: center;
 	vertical-align: middle;
 }
 
 .tag-link {
 	display: inline;
+	cursor: pointer;
 	color: var(--vscode-textLink-foreground);
 }
 
+div #panel {
+	display: flex;
+}
+div #contents {
+	/* width: auto;  */
+	/* float: left; */
+	flex: 1;
+	overflow:auto;
+}
+
+div #minimap {
+	width: 50px;
+	position: fixed;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	background-color: var(--vscode-minimap-background);
+}
+
+#mm-canvas {
+	width: 100%;
+	height: 100%;
+}
 </style>
-<body>
+
+<body onscroll="drawMinimap()">
 	<script>
+	var tagData = [];
+	var tagElems = [];
  	const vscode = acquireVsCodeApi();
 	const openDoc = function(filename, lineno) {
-		console.log("openDoc");
+		// console.log("openDoc");
 		vscode.postMessage({command: 'openDoc', filename: filename, lineno: lineno});
 	}
+	const drawMinimap = function() {
+		const canvas = document.getElementById("mm-canvas");
+		const width = canvas.clientWidth;
+		const height = canvas.clientHeight;
+		if (canvas.width!==width || canvas.height!==height) {
+			canvas.width = width;
+			canvas.height = height;
+		}
+		const ctx = canvas.getContext('2d');
+		ctx.clearRect(0, 0, width, height);
+		const minimapStyle = getComputedStyle(document.getElementById("minimap"));
+		ctx.fillStyle = minimapStyle
+			.getPropertyValue("--vscode-minimapSlider-background"); 
+		ctx.fillRect(30, 0, 20, height);
+		const highlightStyle = minimapStyle
+			.getPropertyValue("--vscode-minimap-selectionHighlight");
+		const anchors = document.getElementsByClassName("tag-anchor");
+
+		for(var i=0; i<tagData.length; i++) {
+			// console.log(anchors[i]);
+			const bb = anchors[i].getBoundingClientRect();
+			const y = (bb.top+bb.bottom)/2; // center of tagline
+			ctx.strokeStyle = highlightStyle;
+            ctx.lineWidth = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(0,y);
+            const target_y = height*tagData[i].position;
+            ctx.bezierCurveTo(20, y, 0, target_y, 30, target_y);
+            ctx.stroke();
+
+			ctx.beginPath();
+            ctx.lineWidth = 2.5;
+            ctx.moveTo(30, target_y);
+            ctx.lineTo(50, target_y);
+            ctx.stroke();
+		}
+	}
+
+	const createDiv = function(className=undefined, text=undefined) {
+		let div = document.createElement("div");
+		if (className) {
+			div.className = className;
+		}
+		if (text) {
+			div.appendChild(document.createTextNode(text));
+		}
+		return div;
+	}
+
+	const createTagElem = function(data) {
+		if (data.currentLocation) {
+			const div = createDiv("current-location", "Current Location");
+			div.classList.add("tag-anchor");
+			return div;
+		} else {
+			const header = createDiv("related-text-header");
+			header.classList.add("tag-anchor");
+			header.onclick = () => openDoc(data.filename, data.lineno);
+			header.appendChild(createDiv("tag-link", `${data.filename}:${data.lineno}`));
+			header.appendChild(document.createTextNode(data.tags));
+			const text = createDiv("related-text", data.text);
+			const container = createDiv();
+			container.append(header, text);
+			return container;
+		}
+	}
+
+	window.addEventListener('message', (event) => {
+		tagData = event.data;
+		const contents = document.getElementById("contents");
+		tagElems = tagData.map((data)=>createTagElem(data));
+		// insert separators
+		const elems = [];
+		for(var i=0; i<tagElems.length; i++) {
+			elems.push(tagElems[i]);
+			if (i<tagElems.length-1) {
+				elems.push(createDiv("related-separator", "⋮"));
+			}
+		}
+		contents.replaceChildren(...elems);
+		drawMinimap();
+	});
+
+	document.addEventListener('DOMContentLoaded', drawMinimap);
     </script>
-${content}
+	<div id="panel">
+		<div id="contents">
+			${content}
+		</div>
+		<div id="minimap">
+			<canvas id="mm-canvas"></canvas>
+		</div>
+	</div>
 </body>
 </html>
