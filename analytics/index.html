@@ -251,7 +251,7 @@ pre code {
 	border-color: rgba(255, 255, 255, 0.18);
 }
 
-.related-text {
+.context-text {
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -259,21 +259,20 @@ pre code {
   -webkit-line-clamp: 5;
 }
 
-.related-text-header {
+.context-text-header {
 	margin-bottom: 0.5em;
 	margin-top: 0.5em;
 	color: var(--vscode-textCodeBlock-foreground);
 	background-color: var(--vscode-textCodeBlock-background);
 }
 
-.related-separator {
+.context-separator {
 	text-align: center;
 }
 
 .current-location {
 	height: 2em;
 	line-height: 2em;
-	/* background-color: red; */
 	color: var(--vscode-selectionForeground);
 	background-color: var(--vscode-editor-selectionBackground);
 	margin-bottom: 0.5em;
@@ -288,12 +287,10 @@ pre code {
 	color: var(--vscode-textLink-foreground);
 }
 
-div #panel {
+div #analytics-view {
 	display: flex;
 }
 div #contents {
-	/* width: auto;  */
-	/* float: left; */
 	flex: 1;
 	overflow:auto;
 }
@@ -319,7 +316,6 @@ div #minimap {
 	var tagElems = [];
  	const vscode = acquireVsCodeApi();
 	const openDoc = function(filename, lineno) {
-		// console.log("openDoc");
 		vscode.postMessage({command: 'openDoc', filename: filename, lineno: lineno});
 	}
 	const drawMinimap = function() {
@@ -341,7 +337,6 @@ div #minimap {
 		const anchors = document.getElementsByClassName("tag-anchor");
 
 		for(var i=0; i<tagData.length; i++) {
-			// console.log(anchors[i]);
 			const bb = anchors[i].getBoundingClientRect();
 			const y = (bb.top+bb.bottom)/2; // center of tagline
 			ctx.strokeStyle = highlightStyle;
@@ -377,12 +372,12 @@ div #minimap {
 			div.classList.add("tag-anchor");
 			return div;
 		} else {
-			const header = createDiv("related-text-header");
+			const header = createDiv("context-text-header");
 			header.classList.add("tag-anchor");
 			header.onclick = () => openDoc(data.filename, data.lineno);
 			header.appendChild(createDiv("tag-link", `${data.filename}:${data.lineno}`));
 			header.appendChild(document.createTextNode(data.tags));
-			const text = createDiv("related-text", data.text);
+			const text = createDiv("context-text", data.contextText);
 			const container = createDiv();
 			container.append(header, text);
 			return container;
@@ -390,6 +385,7 @@ div #minimap {
 	}
 
 	window.addEventListener('message', (event) => {
+		console.log("received message:", event.data);
 		tagData = event.data;
 		const contents = document.getElementById("contents");
 		tagElems = tagData.map((data)=>createTagElem(data));
@@ -398,7 +394,7 @@ div #minimap {
 		for(var i=0; i<tagElems.length; i++) {
 			elems.push(tagElems[i]);
 			if (i<tagElems.length-1) {
-				elems.push(createDiv("related-separator", "⋮"));
+				elems.push(createDiv("context-separator", "⋮"));
 			}
 		}
 		contents.replaceChildren(...elems);
@@ -407,7 +403,7 @@ div #minimap {
 
 	document.addEventListener('DOMContentLoaded', drawMinimap);
     </script>
-	<div id="panel">
+	<div id="analytics-view">
 		<div id="contents">
 			${content}
 		</div>

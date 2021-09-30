@@ -29,7 +29,6 @@ export class AnalyticsView {
     }
     
     public dispose() {
-        console.log("Analytics.dispose()");
         this.disposable.dispose();
     }
 
@@ -60,11 +59,16 @@ export class AnalyticsView {
         }
     }
 
-    reload() {
+    reload(forced: boolean = false) {
+        if (!this.panel) {
+            return;
+        }
         const currentDoc = vscode.window.activeTextEditor?.document;
         const currentLine = vscode.window.activeTextEditor?.selection.start.line;
-        if (!(this.lastLocation?.doc===currentDoc &&
-              this.lastLocation?.line===currentLine)) {
+        if (forced || 
+            this.lastLocation===undefined || 
+            this.lastLocation.doc!==currentDoc ||
+            this.lastLocation.line!==currentLine) {
             this.lastLocation = { doc: currentDoc!, line: currentLine! };
             const fs = vscode.workspace.fs;
             const html = fs.readFile(vscode.Uri.file(
@@ -75,9 +79,7 @@ export class AnalyticsView {
                 this.panel!.webview.postMessage(this.generateContent());
             });
         }
-
     }
-
     
     private onEvent() {
         let uri = vscode.window.activeTextEditor?.document.uri;
@@ -126,34 +128,11 @@ export class AnalyticsView {
                     currentLocation: false,
                     filename: vscode.workspace.asRelativePath(t.docFile.filename),
                     lineno: t.lineno,
-                    text: t.contextText,
+                    contextText: t.contextText,
                     position: t.globalOffset/totalChars,
                     tags: t.tagLine.match(/<!--(.*?)-->/)?.[1] // whatever is inside comment
                 };
             }
         });
-
-        //  return relatedTags.map( (t) => {
-        //     if (t.docFile.filename===editor?.document.fileName && t.lineno===thisTagLine) {
-        //         return `
-        //             <div class="current-location">
-        //                 Current Position (${t.globalOffset})
-        //             </div>`;
-        //     } else {
-        //         let filename = vscode.workspace.asRelativePath(t.docFile.filename);
-        //         let tags = t.tagLine.match(/<!--(.*?)-->/)?.[1]; // whatever is inside comment
-        //         return ` 
-        //             <div class="related-text-header" onclick="openDoc('${filename}', ${t.lineno})">
-        //                 <div class="tag-link">
-        //                     ${filename}: ${t.lineno}
-        //                 </div>
-        //                 ${tags} (${t.globalOffset})
-        //             </div>
-        //             <div class="related-text">
-        //                 ${t.contextText}
-        //             </div>`;
-        //     }})
-        //     .join(`<div class="related-separator">⋮</div>`) +
-        //     `<div>total chars = ${this.model.totalChars}</div>`;
     }
 }

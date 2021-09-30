@@ -6,7 +6,7 @@ import * as yaml from 'yaml';
 import * as chokidar from 'chokidar';
 import { promisify } from 'util';
 import { readTextFile } from './Util';
-import { homeDir, configFile, EXT_NAME } from './extension';
+import { homeDir, configFile, analyticsView, EXT_NAME } from './extension';
 
 export class FictionModel implements
   vscode.TreeDataProvider<Object>,
@@ -36,7 +36,6 @@ export class FictionModel implements
   }
 
   async scan() {
-    console.log('scanning...');
     try {
       const start = new Date().getMilliseconds();
       this.config = yaml.parse(await readTextFile(configFile()!));
@@ -53,7 +52,6 @@ export class FictionModel implements
       for (let file of allFiles(this.document)) {
         file.offset = offset;
         const [hashtags, numChars] = await file.scan();
-        // console.log(`adding ${hashtags.length} hashtags`);
         offset += numChars;
         this.hashtags.push(...hashtags);
         for (let t of hashtags) {
@@ -65,8 +63,8 @@ export class FictionModel implements
       this.checkHashtags();
       this.errorMessage = undefined;
       this.totalChars = offset;
-      const duration = new Date().getMilliseconds() - start;
-      console.log(`Scanned document in ${duration} ms.`);
+      // const duration = new Date().getMilliseconds() - start;
+      analyticsView.reload(true);
     } catch (error) {
       console.error(`Error reading ${this.config}: ${error}`);
       // will be shown in the view panel
@@ -419,7 +417,6 @@ class DocFile {
       }
     }
     this.hashtags = hashtags;
-    // console.log(`scanned ${this.filename}, found ${promises.length} tags`);
     return [hashtags, totalChars];
   }
 

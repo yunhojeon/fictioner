@@ -12,7 +12,7 @@ export const EXT_NAME = "fictioner";
 // export let analyticsView: vscode.WebviewPanel | undefined;
 
 let model: FictionModel;
-let analyticsView: AnalyticsView;
+export let analyticsView: AnalyticsView;
 
 export function homeDir(): Uri | undefined {
 	return workspace?.workspaceFolders?.[0].uri;
@@ -78,16 +78,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	regCmd('fictioner.analytics', async () => {
 		openAnalytics();
-		// const doc = await workspace.openTextDocument(analViewUri);
-		// window.showTextDocument(doc, { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
 	});
 	
 	model = new FictionModel();
 
 	// analytics view
-
-	// const vdocProvider = new Analytics(analViewUri, model);
-	// disposables.push(workspace.registerTextDocumentContentProvider(EXT_NAME, vdocProvider));
 	analyticsView = new AnalyticsView(context, model);
 	disposables.push(model);
 
@@ -129,8 +124,6 @@ function openConfig() {
 }
 
 async function openAnalytics() {
-	// const doc = await workspace.openTextDocument(analViewUri);
-	// window.showTextDocument(doc, { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
 	analyticsView.show();
 }
 
