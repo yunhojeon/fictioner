@@ -63,7 +63,7 @@ export class FictionModel implements
       this.checkHashtags();
       this.errorMessage = undefined;
       this.totalChars = offset;
-      // const duration = new Date().getMilliseconds() - start;
+      console.log(`scan took ${new Date().getMilliseconds() - start} msec`);
       analyticsView.reload(true);
     } catch (error) {
       console.error(`Error reading ${this.config}: ${error}`);

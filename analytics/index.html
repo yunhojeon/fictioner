@@ -314,6 +314,8 @@ div #minimap {
 	<script>
 	var tagData = [];
 	var tagElems = [];
+	var resizeTimer = null;
+
  	const vscode = acquireVsCodeApi();
 	const openDoc = function(filename, lineno) {
 		vscode.postMessage({command: 'openDoc', filename: filename, lineno: lineno});
@@ -402,6 +404,14 @@ div #minimap {
 	});
 
 	document.addEventListener('DOMContentLoaded', drawMinimap);
+
+	window.addEventListener('resize', function(){
+	clearTimeout(resizeTimer);
+	resizeTimer = setTimeout(function(){
+		drawMinimap();
+	}, 300);
+
+});
     </script>
 	<div id="analytics-view">
 		<div id="contents">
