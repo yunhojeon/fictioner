@@ -1,6 +1,5 @@
 // utility functions
 import { TextDecoder, TextEncoder } from "util";
-import { homeDir } from "./extension";
 import * as vscode from "vscode";
 
 export async function readTextFile(file: vscode.Uri | string ): Promise<string> {

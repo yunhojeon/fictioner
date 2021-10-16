@@ -4,7 +4,6 @@ import * as path from 'path';
 import * as glob from 'glob';
 import * as yaml from 'yaml';
 import * as chokidar from 'chokidar';
-import { promisify } from 'util';
 import { readTextFile } from './Util';
 import { homeDir, configFile, analyticsView, EXT_NAME } from './extension';
 
@@ -75,9 +74,7 @@ export class FictionModel implements
     const watcher = chokidar.watch(watchFiles);
     console.log(`watching ${watchFiles.length} files.`);
     watcher.on('change', async (file: string) => {
-      watcher.close();
-      console.log(`File ${file} changed.`);
-      await promisify(setTimeout)(100);
+      await watcher.close();
       this.scan();
     });
 
@@ -288,6 +285,9 @@ function obj2doc(model: FictionModel, obj: any): DocObject {
   throw new Error(`Cannot parse ${obj} in config file.`);
 }
 
+//
+// given relative file path glob pattern, returns list of DocFiles
+//
 function path2files(model: FictionModel, filepath: string): DocFile[] {
   return glob.sync(path.join(homeDir()!.fsPath, filepath))
     .map((filename) => new DocFile(model, filename));
