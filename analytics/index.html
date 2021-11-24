@@ -262,8 +262,13 @@ pre code {
 .context-text-header {
 	margin-bottom: 0.5em;
 	margin-top: 0.5em;
-	color: var(--vscode-textCodeBlock-foreground);
-	background-color: var(--vscode-textCodeBlock-background);
+	padding: 0.3em;
+	color: var(--vscode-textBlockQuote-foreground);
+	background-color: var(--vscode-textBlockQuote-background);
+	border-width: 1px;
+	border-radius: 0.5em;
+	border-style: solid;
+	border-color: var(--vscode-textBlockQuote-foreground);
 }
 
 .context-separator {
@@ -272,6 +277,8 @@ pre code {
 
 .current-location {
 	height: 2em;
+	border-radius: 0.5em;
+	padding: 0.3em;
 	line-height: 2em;
 	color: var(--vscode-selectionForeground);
 	background-color: var(--vscode-editor-selectionBackground);
@@ -335,7 +342,7 @@ div #minimap {
 			.getPropertyValue("--vscode-minimapSlider-background"); 
 		ctx.fillRect(30, 0, 20, height);
 		const highlightStyle = minimapStyle
-			.getPropertyValue("--vscode-minimap-selectionHighlight");
+			.getPropertyValue("--vscode-minimap-findMatchHighlight");
 		const anchors = document.getElementsByClassName("tag-anchor");
 
 		for(var i=0; i<tagData.length; i++) {

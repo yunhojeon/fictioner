@@ -48,12 +48,12 @@ export class FictionModel implements
       const tagIds = new Set<string>();
       let offset = 0;
       this.totalChars = 0;
-      for (let file of allFiles(this.document)) {
+      for (const file of allFiles(this.document)) {
         file.offset = offset;
         const [hashtags, numChars] = await file.scan();
         offset += numChars;
         this.hashtags.push(...hashtags);
-        for (let t of hashtags) {
+        for (const t of hashtags) {
           tagIds.add(t.id);
           this.hashtagDB.insert(t);
         }

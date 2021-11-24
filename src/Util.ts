@@ -22,14 +22,9 @@ export function formatString(source: string, values: Map<string, string>) {
 	);
 }
 
-export function openAndSelectLine(uri: vscode.Uri, lineno: number) {
-    // console.log(`showing ${args[0]}`);
+export async function openAndSelectLine(uri: vscode.Uri, lineno: number) {
     const range = new vscode.Range(new vscode.Position(lineno, 0), new vscode.Position(lineno, 0));
-
-    vscode.window.showTextDocument(uri, { preview: false, viewColumn: vscode.ViewColumn.One }).then(
-        (editor: vscode.TextEditor) => {
-            editor.revealRange(range);
-            editor.selection = new vscode.Selection(range.start, range.end);
-        }
-    );
+    const editor = await vscode.window.showTextDocument(uri, { preview: false, viewColumn: vscode.ViewColumn.One });
+    editor.revealRange(range);
+    editor.selection = new vscode.Selection(range.start, range.end);
 }
