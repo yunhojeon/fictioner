@@ -251,6 +251,17 @@ pre code {
 	border-color: rgba(255, 255, 255, 0.18);
 }
 
+.context-container {
+	margin-bottom: 0.5em;
+	margin-top: 0.5em;
+	padding: 0.3em;
+	border-width: 1px;
+	border-radius: 0.5em;
+	border-style: solid;
+	border-color: var(--vscode-window-activeBorder);
+	background-color: var(--vscode-textBlockQuote-background);
+}
+
 .context-text {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -260,15 +271,8 @@ pre code {
 }
 
 .context-text-header {
+	color: var(--vscode-textPreformat-foreground);
 	margin-bottom: 0.5em;
-	margin-top: 0.5em;
-	padding: 0.3em;
-	color: var(--vscode-textBlockQuote-foreground);
-	background-color: var(--vscode-textBlockQuote-background);
-	border-width: 1px;
-	border-radius: 0.5em;
-	border-style: solid;
-	border-color: var(--vscode-textBlockQuote-foreground);
 }
 
 .context-separator {
@@ -387,7 +391,7 @@ div #minimap {
 			header.appendChild(createDiv("tag-link", `${data.filename}:${data.lineno}`));
 			header.appendChild(document.createTextNode(data.tags));
 			const text = createDiv("context-text", data.contextText);
-			const container = createDiv();
+			const container = createDiv("context-container");
 			container.append(header, text);
 			return container;
 		}
