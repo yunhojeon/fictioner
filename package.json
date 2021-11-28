@@ -3,7 +3,7 @@
 	"publisher": "YunhoJeon",
 	"displayName": "Fiction Writing Tool",
 	"description": "vscode extension for writing fiction using Markdown",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/yunhojeon/fictioner"
@@ -18,7 +18,7 @@
 		"onCommand:fictioner.enable",
 		"workspaceContains:fictioner.yml"
 	],
-	"main": "./out/extension.js",
+	"main": "./dist/extension.js",
 	"contributes": {
 		"commands": [
 			{
@@ -117,9 +117,10 @@
 		"lint": "eslint src --ext ts",
 		"test": "node ./out/test/runTest.js",
 
-		"vscode:prepublish": "webpack --mode production",
+		"vscode:prepublish": "npm run package",
 		"webpack": "webpack --mode development",
 		"webpack-dev": "webpack --mode development --watch",
+		"package": "webpack --mode production --devtool hidden-source-map",
 		"test-compile": "tsc -p ./"
 	},
 	"devDependencies": {

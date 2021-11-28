@@ -89,6 +89,9 @@ Fictioner는 해시태그 이용하여 최소한의 일관성 체크를 해줍�
 
 ## Release Notes
 
+### 0.2.1
+Analytics UI 개선
+
 ### 0.2.0
 Analytics 화면 추가
 
