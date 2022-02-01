@@ -4,6 +4,7 @@ import { resolveCliPathFromVSCodeExecutablePath } from 'vscode-test';
 import { FictionModel, Hashtag } from './FictionModel';
 import { openAndSelectLine } from './Util';
 import { homeDir } from './extension';
+import { WebpackOptionsValidationError } from 'webpack';
 
 const ANALVIEW_KEY = 'analyticsView';
 
@@ -11,10 +12,11 @@ export class AnalyticsView {
 
     panel: vscode.WebviewPanel | undefined;
     private disposable: vscode.Disposable;
+    private onHashtagLine = false;
 
     onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
     onDidChange = this.onDidChangeEmitter.event;
-    lastLocation: { doc: vscode.TextDocument, line: number } | undefined;
+    lastLocation: { doc: vscode.TextDocument, pos: vscode.Position } | undefined;
 
     constructor(private context: vscode.ExtensionContext, public model: FictionModel) {
 
@@ -64,15 +66,18 @@ export class AnalyticsView {
             return;
         }
         const currentDoc = vscode.window.activeTextEditor?.document;
-        const currentLine = vscode.window.activeTextEditor?.selection.start.line;
+        const currentPos = vscode.window.activeTextEditor?.selection.start;
+        // XXX code is too complicated
         if (forced || 
             this.lastLocation===undefined || 
             this.lastLocation.doc!==currentDoc ||
-            this.lastLocation.line!==currentLine) {
-            this.lastLocation = { doc: currentDoc!, line: currentLine! };
-            const fs = vscode.workspace.fs;
-            const html = fs.readFile(vscode.Uri.file(
-                path.join(this.context.extensionPath, 'analytics', 'index.html')
+            (!this.onHashtagLine && this.lastLocation.pos.line!==currentPos?.line) ||
+            (this.onHashtagLine && this.lastLocation.pos!==currentPos!)) {
+                this.lastLocation = { doc: currentDoc!, pos: currentPos! };
+                // XXX should cache
+                const fs = vscode.workspace.fs;
+                const html = fs.readFile(vscode.Uri.file(
+                    path.join(this.context.extensionPath, 'analytics', 'index.html')
             )).then((data: Uint8Array) => {
                 // this.panel!.webview.html = data.toString().replace("${content}", this.generateContent()??"");
                 this.panel!.webview.html = data.toString();
@@ -90,6 +95,7 @@ export class AnalyticsView {
     }
 
     generateContent(): any {
+        // console.log("generateContent");
         let editor = vscode.window.activeTextEditor;
         if (editor===undefined) {
             return undefined;
@@ -99,14 +105,18 @@ export class AnalyticsView {
         // look for hashtags above
         let relatedTags: Hashtag[]=[];
         let thisTagLine = -1;
+        this.onHashtagLine=false;
         for (let i = 0; i < 10 && pos.line - i >= 0; i++) {
             thisTagLine = pos.line-i;
             let line = editor.document.lineAt(thisTagLine).text;
             if (/<!--(.*?)-->/gu.test(line)) {
+                this.onHashtagLine = i===0;
                 for (let m of line.matchAll(/#([\p{L}\p{N}_\-\.]+)/gu)) {
-                    let related = this.model.hashtagDB.query(m[1]);
-                    if (related) {
-                        relatedTags.push(...related);
+                    if (i>0 || pos.character>=m.index! && pos.character<m.index!+m[0].length) {
+                        let related = this.model.hashtagDB.query(m[1]);
+                        if (related) {
+                            relatedTags.push(...related);
+                        }
                     }
                 }
                 break; 
