@@ -38,6 +38,7 @@ export class AnalyticsView {
 
     show() {
         if (!this.panel) {
+            this.prevLocation = undefined;
             this.panel = vscode.window.createWebviewPanel(
                 'fictioner', 'Fictioner Analytics',
                 { viewColumn: vscode.ViewColumn.Beside, 
@@ -63,7 +64,8 @@ export class AnalyticsView {
         }
     }
 
-    reload() {
+    // set forced to true when the result should not be cached, e.g. when document is reloaded
+    reload(forced = false) {
 
         // This functions should be optimized as it is called on every cursor move
         // first, check if the analytics panel is open and the current document is a markdown text
@@ -82,7 +84,8 @@ export class AnalyticsView {
         const currentPos = editor.selection.start;
 
         // check if line number has changed, ignoring column, if it isn't hashtag line
-        if (this.prevLocation?.doc===currentDoc && 
+        if (!forced &&
+            this.prevLocation?.doc===currentDoc && 
             this.prevLocation?.pos.line===currentPos?.line &&
             this.prevHashtagLineNum!==currentPos?.line) {
                 return;
@@ -91,7 +94,7 @@ export class AnalyticsView {
         // search for hashtag line above
         let hashtagLineNum = -1;
         let hashtagLine: String | undefined;
-        
+        console.log("reload pos = ${currentPos}");
         for (let i = currentPos.line; i>=0 && currentPos.line-i<10; i--) {
             let line = editor.document.lineAt(i).text;
             if (/<!--(.*?)-->/gu.test(line)) {
@@ -101,7 +104,8 @@ export class AnalyticsView {
             }
         }
         
-        if (hashtagLineNum===this.prevHashtagLineNum &&
+        if (!forced &&
+            hashtagLineNum===this.prevHashtagLineNum &&
             hashtagLineNum!==currentPos?.line &&
             this.prevLocation?.pos.line!==this.prevHashtagLineNum) {
                 // cursor has moved to another line, but corresponding hashtag line is the same

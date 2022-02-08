@@ -93,14 +93,14 @@
 			"editor/context": [
 				{
 					"command": "fictioner.analytics",
-					"when": "editorLangId == markdown",
+					"when": "editorLangId == markdown && fictionerEnabled",
 					"group": "fictioner"
 				}
 			],
 			"editor/title": [
 				{
 					"command": "fictioner.analytics",
-					"when": "editorLangId == markdown",
+					"when": "editorLangId == markdown && fictionerEnabled",
 					"group": "navigation"
 				}
 			]
