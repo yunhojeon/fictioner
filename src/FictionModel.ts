@@ -16,6 +16,8 @@ export class FictionModel implements
   private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+  private watcher: chokidar.FSWatcher | undefined = undefined; 
+
   public config: any;
   private document?: DocObject;
   private errorMessage: string | undefined = undefined;
@@ -35,6 +37,11 @@ export class FictionModel implements
   }
 
   async scan() {
+    if (this.watcher) {
+      await this.watcher.close();
+      this.watcher = undefined;
+    }
+
     try {
       const start = new Date().getMilliseconds();
       this.config = yaml.parse(await readTextFile(configFile()!));
@@ -48,7 +55,9 @@ export class FictionModel implements
       const tagIds = new Set<string>();
       let offset = 0;
       this.totalChars = 0;
-      for (const file of allFiles(this.document)) {
+      const _allFiles = allFiles(this.document);
+      console.log(`Scanning ${_allFiles.length} files`);
+      for (const file of _allFiles) {
         file.offset = offset;
         const [hashtags, numChars] = await file.scan();
         offset += numChars;
@@ -71,13 +80,12 @@ export class FictionModel implements
     };
 
     const watchFiles = [configFile()!.fsPath, ...this.getFilePaths(false)];
-    const watcher = chokidar.watch(watchFiles);
+    this.watcher = chokidar.watch(watchFiles);
     console.log(`watching ${watchFiles.length} files.`);
-    watcher.on('change', async (file: string) => {
-      await watcher.close();
+    this.watcher.on('change', async (file: string) => {
+      await this.watcher?.close();
       this.scan();
     });
-
     this._onDidChangeTreeData.fire(undefined);
   }
 
