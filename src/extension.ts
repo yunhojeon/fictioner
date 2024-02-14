@@ -4,9 +4,9 @@ import { FictionModel, Hashtag } from './FictionModel';
 import { AnalyticsView } from './Analytics';
 import { readTextFile, writeTextFile, formatString, openAndSelectLine } from './Util';
 
+export const EXT_NAME = "fictioner";
 
 const CONFIG_FILE = "fictioner.yml";
-export const EXT_NAME = "fictioner";
 
 // const analViewUri = Uri.parse(EXT_NAME + ":( Fiction Analysis ).md");
 // export let analyticsView: vscode.WebviewPanel | undefined;
@@ -79,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	regCmd('fictioner.analytics', async () => {
 		openAnalytics();
 	});
-	
+
 	model = new FictionModel();
 
 	// analytics view

@@ -9,13 +9,12 @@
 		"url": "https://github.com/yunhojeon/fictioner"
 	},
 	"engines": {
-		"vscode": "^1.52.0"
+		"vscode": "^1.75.0"
 	},
 	"categories": [
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:fictioner.enable",
 		"workspaceContains:fictioner.yml"
 	],
 	"main": "./dist/extension.js",
@@ -116,7 +115,6 @@
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
 		"test": "node ./out/test/runTest.js",
-
 		"vscode:prepublish": "npm run package",
 		"webpack": "webpack --mode development",
 		"webpack-dev": "webpack --mode development --watch",
