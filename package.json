@@ -116,7 +116,6 @@
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
 		"test": "node ./out/test/runTest.js",
-
 		"vscode:prepublish": "npm run package",
 		"webpack": "webpack --mode development",
 		"webpack-dev": "webpack --mode development --watch",
@@ -128,7 +127,6 @@
 		"@types/mocha": "^8.0.4",
 		"@types/node": "^12.11.7",
 		"@types/vscode": "^1.52.0",
-		"@types/yaml": "^1.9.7",
 		"@typescript-eslint/eslint-plugin": "^4.9.0",
 		"@typescript-eslint/parser": "^4.9.0",
 		"esbuild": "^0.12.28",
