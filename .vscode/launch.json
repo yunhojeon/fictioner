@@ -29,6 +29,25 @@
 				"${workspaceFolder}/out/test/**/*.js"
 			],
 			"preLaunchTask": "npm: test-compile"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Mocha: current file",
+			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"cwd": "${workspaceFolder}",
+			"args": [
+				"--timeout",
+				"999999",
+				"--colors",
+				"--require",
+				"ts-node/register",
+				"${file}"
+			],
+			"console": "integratedTerminal",
+			"env": {
+				"NODE_OPTIONS": "--loader ts-node/esm"
+			}
 		}
 	]
 }

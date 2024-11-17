@@ -1,0 +1,198 @@
+{
+  "type": "root",
+  "children": [
+    {
+      "type": "thematicBreak",
+      "position": {
+        "start": {
+          "line": 1,
+          "column": 1,
+          "offset": 0
+        },
+        "end": {
+          "line": 1,
+          "column": 4,
+          "offset": 3
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "depth": 2,
+      "children": [
+        {
+          "type": "text",
+          "value": "title:  테스트 문서\r\nauthor: 전윤호\r\ndate: 2022-10-01",
+          "position": {
+            "start": {
+              "line": 2,
+              "column": 1,
+              "offset": 5
+            },
+            "end": {
+              "line": 4,
+              "column": 17,
+              "offset": 50
+            }
+          }
+        }
+      ],
+      "position": {
+        "start": {
+          "line": 2,
+          "column": 1,
+          "offset": 5
+        },
+        "end": {
+          "line": 5,
+          "column": 4,
+          "offset": 55
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "depth": 1,
+      "children": [],
+      "position": {
+        "start": {
+          "line": 7,
+          "column": 1,
+          "offset": 59
+        },
+        "end": {
+          "line": 7,
+          "column": 2,
+          "offset": 60
+        }
+      }
+    },
+    {
+      "type": "html",
+      "value": "<!-- 문단 헤더 -->",
+      "position": {
+        "start": {
+          "line": 9,
+          "column": 1,
+          "offset": 64
+        },
+        "end": {
+          "line": 9,
+          "column": 15,
+          "offset": 78
+        }
+      }
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "value": "그 일을 갑자기 시작되었다.\r\n아무도 그것을 예상하지 못했다.",
+          "position": {
+            "start": {
+              "line": 10,
+              "column": 1,
+              "offset": 80
+            },
+            "end": {
+              "line": 11,
+              "column": 18,
+              "offset": 114
+            }
+          }
+        }
+      ],
+      "position": {
+        "start": {
+          "line": 10,
+          "column": 1,
+          "offset": 80
+        },
+        "end": {
+          "line": 11,
+          "column": 18,
+          "offset": 114
+        }
+      }
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "value": "\\n",
+          "position": {
+            "start": {
+              "line": 13,
+              "column": 1,
+              "offset": 118
+            },
+            "end": {
+              "line": 13,
+              "column": 3,
+              "offset": 120
+            }
+          }
+        }
+      ],
+      "position": {
+        "start": {
+          "line": 13,
+          "column": 1,
+          "offset": 118
+        },
+        "end": {
+          "line": 13,
+          "column": 3,
+          "offset": 120
+        }
+      }
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "value": "줄 띄고 문장.",
+          "position": {
+            "start": {
+              "line": 15,
+              "column": 1,
+              "offset": 124
+            },
+            "end": {
+              "line": 15,
+              "column": 9,
+              "offset": 132
+            }
+          }
+        }
+      ],
+      "position": {
+        "start": {
+          "line": 15,
+          "column": 1,
+          "offset": 124
+        },
+        "end": {
+          "line": 15,
+          "column": 9,
+          "offset": 132
+        }
+      }
+    }
+  ],
+  "position": {
+    "start": {
+      "line": 1,
+      "column": 1,
+      "offset": 0
+    },
+    "end": {
+      "line": 16,
+      "column": 1,
+      "offset": 134
+    }
+  }
+}
