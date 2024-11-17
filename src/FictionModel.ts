@@ -16,7 +16,7 @@ export class FictionModel implements
   private _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private watcher: chokidar.FSWatcher | undefined = undefined; 
+  private watcher: chokidar.FSWatcher | undefined = undefined;
 
   public config: any;
   private document?: DocObject;
@@ -97,6 +97,12 @@ export class FictionModel implements
       let severity: vscode.DiagnosticSeverity | undefined;
       switch (t.kind) {
         case HashtagKind.mentioned:
+          // this tag is to be used for repeating motifs
+          // let's warn if there's only one of its kind
+          if (this.hashtagDB.query(t.id, t.kind)?.length === 1) {
+            message = 'not repeated';
+            severity = vscode.DiagnosticSeverity.Warning;
+          }
           break;
         case HashtagKind.quenstioned:
           {
@@ -402,7 +408,7 @@ class DocFile {
       let m = /^#+\s+(.*)$/gu.exec(line); // title line
       if (m) {
         this.scannedTitle = m[1];
-        totalChars += m[1].length +1;
+        totalChars += m[1].length + 1;
       } else {
         if (/<!--(.*?)-->/gu.test(line)) { // comment line
           let matches = Array.from(line.matchAll(/#[\p{L}\p{N}_\-\.\?!]+/gu));
@@ -415,12 +421,12 @@ class DocFile {
               text += lines[j] + "\n";
             }
             for (let tag of matches) {
-              hashtags.push(new Hashtag(this, lineno, tag.index ?? 0, tag[0], text, line, this.offset+totalChars));
+              hashtags.push(new Hashtag(this, lineno, tag.index ?? 0, tag[0], text, line, this.offset + totalChars));
             }
           }
         } else {
           // normal text line
-          totalChars += line.trim().length+1;
+          totalChars += line.trim().length + 1;
         }
       }
     }
