@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as tmp from 'tmp';
 import { file as tmpFile, FileResult } from 'tmp-promise';
 import { exec } from 'child_process';
 import * as path from 'path';
+import { promises as fs } from 'fs';
 
 export class DocumentProcessor {
 
@@ -15,8 +15,8 @@ export class DocumentProcessor {
     /**
      * Creates a temporary file and returns a promise with the path
      */
-    private async createTempFile(): Promise<FileResult> {
-        return await tmpFile({ postfix: '.md' });
+    private async createTempFile(postfix: string): Promise<FileResult> {
+        return await tmpFile({ postfix });
     }
 
     /**
