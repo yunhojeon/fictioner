@@ -33,21 +33,20 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Mocha: current file",
+			"name": "Mocha: all test cases",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-			"cwd": "${workspaceFolder}",
 			"args": [
 				"--timeout",
 				"999999",
 				"--colors",
 				"--require",
 				"ts-node/register",
-				"${file}"
+				"test/**/*.spec.ts" // Changed from ${file} to only run test files
 			],
 			"console": "integratedTerminal",
-			"env": {
-				"NODE_OPTIONS": "--loader ts-node/esm"
-			}
+			"skipFiles": [
+				"<node_internals>/**"
+			]
 		}
 	]
 }
