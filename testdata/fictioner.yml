@@ -1,8 +1,10 @@
-title: test
-contents:
-  - c/prologue.md
-  - Chapter 1: c/Chapter 1/*.md
-  - Chapter 2: c/Chapter 2/*.md
-  - c/epilogue.md
-compile:
-  pandoc -o out.docx
+My Novel:
+  content: testdata/novel/c/*.md
+  formats: docx, epub
+  output: testdata/novel/out
+
+Blog Posts:
+  type: individual
+  content: testdata/blog/**/*.md
+  formats: html
+  output: ${content.dir}

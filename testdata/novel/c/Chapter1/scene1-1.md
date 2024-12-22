@@ -1,4 +1,7 @@
-# Title
+---
+title: My Awesome Novel
+author: Yunho Jeon
+---
 
 ## Chapter 1
 

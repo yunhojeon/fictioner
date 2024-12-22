@@ -1,11 +1,12 @@
-import { Document, DocumentConfig, OutputFormat } from '../../src/core/Configuration';
+import { Document, DocumentConfig, OutputFormat, ConfigParser } from '../../src/core/ConfigFile';
 import { expect } from 'chai';
+import { readFileSync } from 'fs';
 import path from 'path';
 
-describe('Document', () => {
-    // Utility function to normalize paths for cross-platform testing
-    const normalizePath = (p: string) => path.normalize(p).replace(/\\/g, '/');
+// Utility function to normalize paths for cross-platform testing
+const normalizePath = (p: string) => path.normalize(p).replace(/\\/g, '/');
 
+describe('Document', () => {
     const defaultConfig: DocumentConfig = {
         type: 'document',
         content: '',
@@ -86,3 +87,29 @@ describe('Document', () => {
         });
     });
 });
+
+describe('ConfigParser', () => {
+    const configText = readFileSync('testdata/fictioner.yml', 'utf8');
+
+    it('should parse config file and create Document objects', () => {
+        const parser = new ConfigParser(configText);
+        const documents = parser.getDocuments();
+        expect(documents.length).to.equal(2);
+    });
+
+    it('should correctly identify combined documents', () => {
+        const parser = new ConfigParser(configText);
+        const combDocs = parser.getCombinedDocuments();
+        expect(combDocs.length).to.equal(1);
+        expect(combDocs[0].name).to.equal('My Novel');
+    });
+
+    it('should correctly identify individual documents', () => {
+        const parser = new ConfigParser(configText);
+        const indiDocs = parser.getIndividualDocuments();
+        expect(indiDocs.length).to.equal(1);
+        expect(indiDocs[0].name).to.equal('Blog Posts');
+        expect(indiDocs[0].type).to.equal('individual');
+    });
+});
+

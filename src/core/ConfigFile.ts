@@ -3,7 +3,7 @@ import * as path from 'path';
 
 // Types for configuration structure
 export type DocumentType = 'document' | 'individual';
-export type OutputFormat = 'docx' | 'pdf' | 'epub';
+export type OutputFormat = 'docx' | 'pdf' | 'html' | 'epub';
 export interface FormatOptions {
     docx?: string;
     pdf?: string;
@@ -118,32 +118,6 @@ export class ConfigParser {
         }
     }
 
-    private parseConfig(): void {
-        // Extract and remove defaults
-        this.defaults = this.parseDocumentConfig(
-            this.config['Default'] || {} as DocumentConfig,
-            {
-                type: 'document',
-                content: '',
-                formats: ['docx'],
-                output: '${content}/out',
-                filename: '${name}.${format}'
-            }
-        );
-        delete this.config['Default'];
-
-        // Parse remaining documents
-        for (const [name, cfg] of Object.entries(this.config)) {
-            // Handle shorthand syntax
-            const fullConfig = typeof cfg === 'string'
-                ? { content: cfg }
-                : cfg;
-
-            const docConfig = this.parseDocumentConfig(fullConfig, this.defaults);
-            this.documents.set(name, new Document(name, docConfig, this.defaults));
-        }
-    }
-
     private parseDocumentConfig(
         config: DocumentConfig | string,
         defaults: DocumentConfig
@@ -154,9 +128,13 @@ export class ConfigParser {
 
         // Validate formats
         if (config.formats) {
-            config.formats = config.formats
+            const formatArray = Array.isArray(config.formats)
+                ? config.formats
+                : String(config.formats).split(',').map(f => f.trim());
+
+            config.formats = formatArray
                 .map(f => f.toLowerCase())
-                .filter(f => ['docx', 'pdf', 'epub'].includes(f)) as OutputFormat[];
+                .filter(f => ['docx', 'pdf', 'html', 'epub'].includes(f)) as OutputFormat[];
         }
 
         return config;
