@@ -132,7 +132,7 @@
 		"cross-env": "^7.0.3",
 		"esbuild": "^0.20.2",
 		"eslint": "^8.57.1",
-		"mocha": "^9.2.2",
+		"mocha": "^11.0.1",
 		"source-map-support": "^0.5.21",
 		"ts-loader": "^9.5.1",
 		"ts-node": "^10.9.2",

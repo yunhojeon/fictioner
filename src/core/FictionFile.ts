@@ -1,8 +1,10 @@
 import { SemanticTag, SemanticTagKind } from './SemanticTag'
-import { SrcLocation } from './types'
+import { SrcRange } from './types'
 
 export class FictionFile {
     semanticTags: SemanticTag[] = [];
+    frontMatter: string='';
+
     // markdown content is given as string
     constructor(
         public src: string) {
@@ -18,7 +20,7 @@ export class FictionFile {
     // 5. Prepend backslash to curly quotes
     // 6. Build mapTable to map line numbers in the processed content to the original content
     // 7. Add one blank line at the end
-    public processMarkdown(): { frontMatter: string, out: string, mapTable: { [key: number]: number } } {
+    public processMarkdown(): { frontMatter: string, processedMarkdown: string, mapTable: { [key: number]: number } } {
         const frontMatterRegex = /^---\s*\n([\s\S]*?)\n---\t*\n/;
         const htmlCommentRegex = /<!--[\s\S]*?-->/g;
         const lineSeparatorRegex = /^\*\*\*$/gm;
@@ -84,16 +86,20 @@ export class FictionFile {
             out += processedLine + '\n';
             mapTable[outLineNum++] = frontMatterOffset + srcLineNum;
         });
-
-        return { frontMatter, out, mapTable };
+        this.frontMatter = frontMatter;
+        return { frontMatter, processedMarkdown: out, mapTable };
     }
 
-    processComment(comment: string, lineNum: number, column: number) {
+    processComment(comment: string, lineNum: number, offset: number) {
         // find all semantic tags in the comment
         const hashTagRegex = /#[\p{L}\p{N}_\-\.\?\+!]+/gu;
         for (const match of comment.matchAll(hashTagRegex)) {
+            const token = match[0];
+            const character = offset + match.index!;
             this.semanticTags.push(
-                new SemanticTag(new SrcLocation(this, lineNum, column + match.index!), match[0])
+                new SemanticTag(
+                    new SrcRange(this, lineNum, character, lineNum, character+token.length), 
+                match[0])
             );
         }
     }

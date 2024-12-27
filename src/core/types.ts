@@ -9,3 +9,14 @@ export class SrcLocation {
         public character: number) {
     }
 }
+
+export class SrcRange extends SrcLocation {
+    constructor(
+        public file: FictionFile,
+        public startLine: number,
+        public startCharacter: number,
+        public endLine: number,
+        public endCharacter: number) {
+        super(file, startLine, startCharacter)
+    }
+}

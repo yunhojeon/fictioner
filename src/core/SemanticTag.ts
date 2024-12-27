@@ -1,4 +1,4 @@
-import { SrcLocation } from './types'
+import { SrcRange } from './types'
 
 export enum SemanticTagKind {
     Raised,
@@ -13,7 +13,7 @@ export class SemanticTag {
     id: string;
 
     constructor(
-        public srcLocation: SrcLocation,
+        public srcRange: SrcRange,
         token: string) {
         if (token.endsWith('?')) {
             this.kind = SemanticTagKind.Raised;

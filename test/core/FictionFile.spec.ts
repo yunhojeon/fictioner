@@ -39,7 +39,7 @@ Another paragraph.
         const result = fictionFile.processMarkdown();
 
         assert.equal(result.frontMatter, `title: Test\nauthor: Author`);
-        assert.equal(result.out, out);
+        assert.equal(result.processedMarkdown, out);
         assert.ok(Object.keys(result.mapTable).length > 0);
     });
 
@@ -57,6 +57,6 @@ Only text remains.
         const fictionFile = new FictionFile(src);
         const result = fictionFile.processMarkdown();
 
-        assert.equal(result.out, out);
+        assert.equal(result.processedMarkdown, out);
     });
 });
