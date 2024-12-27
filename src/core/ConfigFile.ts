@@ -20,9 +20,9 @@ export interface DocumentConfig {
     type?: DocumentType;
     content: string;
     formats?: OutputFormat[];
-    output?: string;
     template?: FormatTemplates;
-    filename?: string;
+    out_dir?: string;
+    out_filename?: string;
     options?: FormatOptions;
 }
 
@@ -36,9 +36,9 @@ export class Document {
     readonly type: DocumentType;
     readonly content: string;
     readonly formats: OutputFormat[];
-    readonly output: string;
     readonly template: FormatTemplates;
-    readonly filename: string;
+    readonly out_dir: string;
+    readonly out_filename: string;
     readonly options: FormatOptions;
 
     constructor(
@@ -50,20 +50,20 @@ export class Document {
         this.type = config.type || defaults.type || 'document';
         this.content = config.content;
         this.formats = config.formats || defaults.formats || ['docx'];
-        this.output = config.output || defaults.output || '${content}/out';
+        this.out_dir = config.out_dir || defaults.out_dir || '${content}/out';
         this.template = { ...defaults.template, ...config.template };
-        this.filename = config.filename || defaults.filename || '${name}.${format}';
+        this.out_filename = config.out_filename || defaults.out_filename || '${name}.${format}';
         this.options = { ...defaults.options, ...config.options };
     }
 
     // Resolve variables in output path
     resolveOutput(): string {
-        return this.output.replace('${content}', path.dirname(this.content));
+        return this.out_dir.replace('${content}', path.dirname(this.content));
     }
 
     // Resolve variables in filename template
     resolveFilename(format: OutputFormat, date: Date = new Date()): string {
-        let filename = this.filename
+        let filename = this.out_filename
             .replace('${name}', this.name)
             .replace('${format}', format)
             .replace('${date}', this.formatDate(date));
@@ -96,8 +96,8 @@ export class ConfigParser {
                     type: 'document',
                     content: '',
                     formats: ['docx'],
-                    output: '${content}/out',
-                    filename: '${name}.${format}'
+                    out_dir: '${content}/out',
+                    out_filename: '${name}.${format}'
                 }
             );
             delete this.config['Default'];

@@ -35,13 +35,14 @@
 			"request": "launch",
 			"name": "Mocha: all test cases",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"cwd": "${workspaceFolder}/test/data",
 			"args": [
 				"--timeout",
 				"999999",
 				"--colors",
 				"--require",
 				"ts-node/register",
-				"test/**/*.spec.ts" // Changed from ${file} to only run test files
+				"${workspaceFolder}/test/**/*.spec.ts" // Changed from ${file} to only run test files
 			],
 			"console": "integratedTerminal",
 			"skipFiles": [
@@ -53,6 +54,7 @@
 			"request": "launch",
 			"name": "Mocha: run current test case",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"cwd": "${workspaceFolder}/test/data",
 			"args": [
 				"--timeout",
 				"999999",

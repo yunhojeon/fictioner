@@ -1,10 +1,10 @@
 My Novel:
-  content: testdata/novel/c/*.md
+  content: novel/c/*.md
   formats: docx, epub
-  output: testdata/novel/out
+  output: novel/out
 
 Blog Posts:
   type: individual
-  content: testdata/blog/**/*.md
+  content: blog/**/*.md
   formats: html
   output: ${content.dir}

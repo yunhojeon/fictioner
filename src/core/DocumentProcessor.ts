@@ -1,15 +1,9 @@
 import fs from 'fs/promises';
-import { file as tmpFile, FileResult } from 'tmp-promise';
 
 export class DocumentProcessor {
     lineMappings: Array<{ originalFile: string; startLine: number; lineCount: number }> = [];
 
-    async createTempFile(postfix: string): Promise<{ path: string; cleanup: () => void }> {
-        return await tmpFile({ postfix });
-    }
-
-    async mergeMdFiles(files: string[]): Promise<{ path: string; cleanup: () => void }> {
-        const tempFile = await this.createTempFile('.md');
+    async mergeMdFiles(files: string[]): Promise<string> {
         const mergedContent: string[] = [];
         this.lineMappings = [];
 
@@ -36,9 +30,7 @@ export class DocumentProcessor {
 
             currentLine += lines.length - startIndex + 2;
         }
-
-        await fs.writeFile(tempFile.path, mergedContent.join(''));
-        return tempFile;
+        return mergedContent.join('')
     }
 
     mapLineToOriginal(mergedLine: number): { file: string, line: number } | null {

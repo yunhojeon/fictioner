@@ -58,7 +58,7 @@ Each document entry can specify its type:
   - `formats: docx`
   - `formats: docx, pdf, epub`
 
-`output` (Optional)
+`out.dir` (Optional)
 
 - Directory where generated files will be placed
 - Can use variables:
@@ -78,7 +78,7 @@ template:
   epub: templates/novel.epub
 ```
 
-`filename` (Optional)
+`out.filename` (Optional)
 
 - Template for generated filenames
 - Available variables:

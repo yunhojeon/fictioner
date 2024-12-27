@@ -18,7 +18,7 @@ export class FictionFile {
     // 5. Prepend backslash to curly quotes
     // 6. Build mapTable to map line numbers in the processed content to the original content
     // 7. Add one blank line at the end
-    public processMarkdown() {
+    public processMarkdown(): { frontMatter: string, out: string, mapTable: { [key: number]: number } } {
         const frontMatterRegex = /^---\s*\n([\s\S]*?)\n---\t*\n/;
         const htmlCommentRegex = /<!--[\s\S]*?-->/g;
         const lineSeparatorRegex = /^\*\*\*$/gm;

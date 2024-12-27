@@ -11,9 +11,9 @@ describe('Document', () => {
         type: 'document',
         content: '',
         formats: ['docx'],
-        output: '${content}/out',
+        out_dir: '${content}/out',
         template: {},
-        filename: '${name}.${format}',
+        out_filename: '${name}.${format}',
         options: {}
     };
 
@@ -23,9 +23,9 @@ describe('Document', () => {
                 type: 'document',
                 content: 'content/path',
                 formats: ['pdf'],
-                output: 'custom/output',
+                out_dir: 'custom/output',
                 template: { pdf: 'template.pdf' },
-                filename: 'custom-${name}.${format}',
+                out_filename: 'custom-${name}.${format}',
                 options: {}
             };
 
@@ -34,9 +34,9 @@ describe('Document', () => {
             expect(doc.type).to.equal('document');
             expect(normalizePath(doc.content)).to.equal(normalizePath('content/path'));
             expect(doc.formats).to.deep.equal(['pdf']);
-            expect(normalizePath(doc.output)).to.equal(normalizePath('custom/output'));
+            expect(normalizePath(doc.out_dir)).to.equal(normalizePath('custom/output'));
             expect(doc.template).to.deep.equal({ pdf: 'template.pdf' });
-            expect(doc.filename).to.equal('custom-${name}.${format}');
+            expect(doc.out_filename).to.equal('custom-${name}.${format}');
             expect(doc.options).to.deep.equal({});
         });
 
@@ -50,9 +50,9 @@ describe('Document', () => {
             expect(doc.type).to.equal('document');
             expect(normalizePath(doc.content)).to.equal(normalizePath('content/path'));
             expect(doc.formats).to.deep.equal(['docx']);
-            expect(doc.output).to.equal('${content}/out');
+            expect(doc.out_dir).to.equal('${content}/out');
             expect(doc.template).to.deep.equal({});
-            expect(doc.filename).to.equal('${name}.${format}');
+            expect(doc.out_filename).to.equal('${name}.${format}');
             expect(doc.options).to.deep.equal({});
         });
     });
@@ -75,7 +75,7 @@ describe('Document', () => {
         it('should replace variables in filename template', () => {
             const config: DocumentConfig = {
                 content: 'content/path',
-                filename: '${name}-${date}.${format}'
+                out_filename: '${name}-${date}.${format}'
             };
 
             const doc = new Document('test', config, defaultConfig);
@@ -89,7 +89,7 @@ describe('Document', () => {
 });
 
 describe('ConfigParser', () => {
-    const configText = readFileSync('testdata/fictioner.yml', 'utf8');
+    const configText = readFileSync('fictioner.yml', 'utf8');
 
     it('should parse config file and create Document objects', () => {
         const parser = new ConfigParser(configText);
