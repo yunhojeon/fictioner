@@ -1,9 +1,9 @@
 import { strict as assert } from 'assert';
-import { FictionFile } from '../../src/core/FictionFile';
+import { ContentFile } from '../../src/core/ContentFile';
 
 describe('FictionFile', () => {
-    it('should process markdown correctly', () => {
-        const src = `---
+        it('should process markdown correctly', () => {
+                const src = `---
 title: Test
 author: Author
 ---
@@ -21,7 +21,7 @@ Another paragraph.
 ‘Curly quotes’ and “double curly quotes”.
 `;
 
-        const out = `
+                const out = `
 # Heading
 
 This is a paragraph.
@@ -35,28 +35,28 @@ Another paragraph.
 
 `;
 
-        const fictionFile = new FictionFile(src);
-        const result = fictionFile.processMarkdown();
+                const fictionFile = new ContentFile(src);
+                const result = fictionFile.processMarkdown();
 
-        assert.equal(result.frontMatter, `title: Test\nauthor: Author`);
-        assert.equal(result.processedMarkdown, out);
-        assert.ok(Object.keys(result.mapTable).length > 0);
-    });
+                assert.equal(result.frontMatter, `title: Test\nauthor: Author`);
+                assert.equal(result.processedMarkdown, out);
+                assert.ok(Object.keys(result.mapTable).length > 0);
+        });
 
-    it('should handle inline comments', () => {
-        const src = `# Heading <!-- comment -->
+        it('should handle inline comments', () => {
+                const src = `# Heading <!-- comment -->
 Text with <!-- inline --> comment.
 <!-- comment -->Only text remains.
 `;
-        const out = `# Heading 
+                const out = `# Heading 
 Text with  comment.
 Only text remains.
 
 `;
 
-        const fictionFile = new FictionFile(src);
-        const result = fictionFile.processMarkdown();
+                const fictionFile = new ContentFile(src);
+                const result = fictionFile.processMarkdown();
 
-        assert.equal(result.processedMarkdown, out);
-    });
+                assert.equal(result.processedMarkdown, out);
+        });
 });

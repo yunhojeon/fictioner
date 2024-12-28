@@ -1,12 +1,9 @@
 import { SemanticTag, SemanticTagKind } from './SemanticTag';
-import { DocumentConfig } from './ConfigFile';
-import { FictionFile } from './FictionFile';
-import { SrcRange } from './types';
+import { DocumentConfig } from './Config';
+import { ContentFile } from './ContentFile';
+import { SrcRange, FileSystem } from './types';
 
-interface FileSystem {
-  findFiles(glob: string, exclude?: string): Promise<string[]>;
-  readFile(path: string): Promise<string>;
-}
+
 
 type Diagnostic = {
   range: SrcRange;
@@ -14,14 +11,14 @@ type Diagnostic = {
   kind: 'error' | 'warning';
 }
 
-export class FictionModel {
+export class ContentModel {
 
   // hashtag database
-  private semanticTags: SemanticTag[]=[];                   // all hashtags, document order
-  private fictionFiles: FictionFile[]=[];
-  private compiledMarkdown: string='';
-  private mapTable: { [key: number]: number }={};
-  private frontMatter: string='';
+  private semanticTags: SemanticTag[] = [];                   // all hashtags, document order
+  private fictionFiles: ContentFile[] = [];
+  private compiledMarkdown: string = '';
+  private mapTable: { [key: number]: number } = {};
+  private frontMatter: string = '';
   private diagnostics: Diagnostic[] = [];
 
   constructor(
@@ -32,11 +29,11 @@ export class FictionModel {
   async readContent() {
 
     const files = await this.fs.findFiles(this.config.content)
-    .then(files => files.sort());
+      .then(files => files.sort());
 
     this.fictionFiles = await Promise.all(files.map(async (file) => {
       let text = await this.fs.readFile(file);
-      return new FictionFile(file);
+      return new ContentFile(file);
     }));
 
     this.compile();
@@ -54,17 +51,17 @@ export class FictionModel {
       this.mapTable = { ...this.mapTable, ...mapTable };
     }
   }
-    
+
   checkHashtags() {
     this.diagnostics = []
     this.semanticTags.forEach((tag, index) => {
-      let message:string|undefined;
-      let severity:string|undefined;
+      let message: string | undefined;
+      let severity: string | undefined;
       switch (tag.kind) {
         case SemanticTagKind.Repeated:
           // this tag is to be used for repeating motifs
           // let's warn if there's only one of its kind
-          if (!this.semanticTags.some(other => 
+          if (!this.semanticTags.some(other =>
             other.id === tag.id && other.kind === tag.kind && other !== tag)) {
             message = 'not repeated';
             severity = 'warning';
@@ -72,12 +69,12 @@ export class FictionModel {
           break;
         case SemanticTagKind.Raised:
           {
-            if (this.semanticTags.slice(0, index).some(other => 
+            if (this.semanticTags.slice(0, index).some(other =>
               other.id === tag.id && other.kind === tag.kind)) {
               message = 'duplicate question';
               severity = 'error';
             }
-            if (!this.semanticTags.slice(index + 1).some(other => 
+            if (!this.semanticTags.slice(index + 1).some(other =>
               other.id === tag.id && other.kind === SemanticTagKind.Resolved)) {
               message = 'not answered';
               severity = 'error';
@@ -86,26 +83,26 @@ export class FictionModel {
           break;
         case SemanticTagKind.Progressing:
           {
-            if (!this.semanticTags.slice(0, index).some(other => 
+            if (!this.semanticTags.slice(0, index).some(other =>
               other.id === tag.id && other.kind === SemanticTagKind.Raised)) {
               message = 'progression without raise';
               severity = 'error';
             }
-            if (!this.semanticTags.slice(0, index).some(other => 
+            if (!this.semanticTags.slice(0, index).some(other =>
               other.id === tag.id && other.kind === SemanticTagKind.Resolved)) {
               message = 'progression after resolution';
               severity = 'error';
             }
           }
-          break;  
+          break;
         case SemanticTagKind.Resolved:
           {
-            if (!this.semanticTags.slice(0, index).some(other => 
+            if (!this.semanticTags.slice(0, index).some(other =>
               other.id === tag.id && other.kind === SemanticTagKind.Raised)) {
               message = 'resolved without raise';
               severity = 'error';
             }
-            if (this.semanticTags.slice(0, index).some(other => 
+            if (this.semanticTags.slice(0, index).some(other =>
               other.id === tag.id && other.kind === tag.kind)) {
               message = 'duplicate resolution';
               severity = 'error';

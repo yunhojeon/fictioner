@@ -1,166 +1,123 @@
-# Configuration Format
+# Configuration File Format
 
-The extension uses YAML format for configuration. The configuration file should be placed in the workspace root as `.vscode/fiction-writer.yml` (or your extension's specific filename).
+The extension uses YAML format for configuration. The configuration file specifies how documents are processed, including their source files, output formats, and processing options.
 
 ## Structure
 
-The configuration file consists of document definitions and special entries:
+The configuration file consists of document definitions, with an optional `default` section that provides default values for all documents.
 
-- Document definitions: Named entries describing complete works (books, stories, etc.)
-- Individual documents: Entries marked with `type: individual` for files that should be processed independently
-- `Default`: Special entry defining workspace-level default values
+Each document can be either:
+
+- A combined document (multiple Markdown files combined into one output)
+- Individual documents (each Markdown file processed separately)
 
 ## Basic Example
 
 ```yaml
-My Novel:
-  content: content/novel/*.md
+My Story:
+  content: content/mystory/*.md
   formats: docx, epub
-  output: content/novel/out
+  output: ${content.dir}/releases/${name}-draft-${date}.${format}
+```
 
-Blog Posts:
-  type: individual
-  content: content/blog/**/*.md
-  formats: pdf
-  output: ${content}
+A minimal document definition can just specify the content pattern:
+
+```yaml
+Quick Notes: content/notes/*.md  # Uses default settings
 ```
 
 ## Configuration Fields
 
-### Top-Level Entries
+### Required Fields
 
-- Document name (e.g., "My Novel"): Used as the work's title and in generated filenames
-- `Default`: Special entry defining workspace-level default values
+- `content`: Glob pattern specifying the Markdown files to process (e.g., `content/mystory/*.md`)
 
-### Document Types
+### Optional Fields
 
-Each document entry can specify its type:
+- `type`: Document processing type
+  - `combined`: Multiple files combined into one output (default)
+  - `individual`: Each file processed separately
+- `formats`: Output formats (comma-separated)
+  - Supported formats depend on the processor (e.g., pandoc)
+  - Example: `docx, pdf, epub`
+- `output`: Output file path template
+  - Can include variables (see below)
+  - Example: `${content.dir}/releases/${name}-${date}.${format}`
+- `template`: Format-specific template files
+  - Specified per format
+  - Example:
 
-- `type: document` (default): Files are combined as chapters of a single work
-- `type: individual`: Files are processed independently
+    ```yaml
+    template:
+      docx: templates/novel.docx
+      pdf: templates/default.latex
+      epub: templates/book.epub
+    ```
 
-### Fields for Each Entry
+- `options`: Format-specific command-line options
+  - Specified per format
+  - Example:
 
-`content` (Required)
+    ```yaml
+    options:
+      docx: --toc --number-sections
+      pdf: --pdf-engine=xelatex --template=${template.pdf}
+    ```
 
-- Pattern matching the Markdown files to be included
-- Uses glob pattern syntax (e.g., `*.md`, `**/*.md`)
-- Examples:
-  - `content/novel/*.md`: All MD files in the novel directory
-  - `content/blog/**/*.md`: All MD files in blog directory and its subdirectories
+## Variables
 
-`formats` (Optional)
+The following variables can be used in `output` paths:
 
-- List of output formats to generate
-- Supported formats: docx, pdf, epub
-- Default: docx
-- Examples:
-  - `formats: docx`
-  - `formats: docx, pdf, epub`
-
-`out.dir` (Optional)
-
-- Directory where generated files will be placed
-- Can use variables:
-  - `${content}`: Expands to the directory of the source files
-- Default: `${content}/out`
-
-`template` (Optional)
-
-- Templates for different output formats
-- Specify per format
-- Example:
-
-```yaml
-template:
-  docx: templates/novel.docx
-  pdf: templates/novel.latex
-  epub: templates/novel.epub
-```
-
-`out.filename` (Optional)
-
-- Template for generated filenames
-- Available variables:
-  - `${name}`: Document name from configuration
-  - `${date}`: Current date
-  - `${version}`: Version number
-  - `${format}`: Output format extension
-- Default: `${name}.${format}`
-- Example: `${name}-draft-${date}`
-
-## Shorthand Syntax
-
-For simple cases, you can use a shorthand syntax where you specify just the content pattern:
-
-```yaml
-Quick Notes: content/notes/*.md  # Uses default settings
-```
-
-### Additional Fields
-
-`options` (Optional)
-
-- Command-line options passed to external tools (e.g., pandoc)
-- Can be specified per format
-- Example:
-
-```yaml
-options:
-  docx: --toc --toc-depth=2
-  pdf: --pdf-engine=xelatex
-```
+- `${content.dir}`: Directory of the content file(s)
+  - For combined documents: directory of first content file
+  - For individual documents: directory of each content file
+- `${content.name}`: Base name of the content file (without extension)
+- `${content.ext}`: Extension of the content file
+- `${name}`: Document name from configuration
+- `${date}`: Current date
+- `${format}`: Output format extension
+- `${template.format}`: Path to template for specific format
 
 ## Complete Example
 
 ```yaml
-Default:
+default:
+  content: content/**/*.md
   formats: docx
-  output: ${content}/out
+  type: combined
+  output: ${content.dir}/out/${name}-${date}.${format}
   template:
     docx: templates/default.docx
     pdf: templates/default.latex
-  filename: ${name}-${date}
   options:
-    docx: --toc
+    docx: --toc --number-sections
     pdf: --pdf-engine=xelatex
 
-My Novel:
-  type: document  # default type
-  content: content/novel/*.md
+My Story:
+  content: content/mystory/*.md
   formats: docx, epub
-  output: content/novel/out
+  output: ${content.dir}/releases/${name}-draft-${date}.${format}
   template:
     docx: templates/novel.docx
     epub: templates/novel.epub
-  filename: ${name}-draft-${date}
   options:
-    docx: --toc --toc-depth=2
-    epub: --toc --toc-depth=1
-
-Quick Notes: content/notes/*.md  # Uses default settings
+    docx: --reference-doc=${template.docx} --toc
+    epub: --toc --epub-cover-image=cover.jpg
 
 Blog Posts:
+  content: content/blog/**/*.md
   type: individual
-  content: content/blog/posts/**/*.md
   formats: pdf
-  output: ${content}
+  output: ${content.dir}/post-${date}.${format}
   template:
     pdf: templates/blog.latex
-  filename: post-${date}
-
-Articles:
-  type: individual
-  content: content/articles/**/*.md
-  formats: docx, pdf
-  output: content/articles/out
   options:
-    docx: --reference-doc=templates/article.docx
+    pdf: --pdf-engine=xelatex --template=${template.pdf}
 ```
 
-## File Organization
+## File Organization Tips
 
-The extension assumes chapters/content are ordered by filename. A recommended naming scheme is to prefix files with numbers:
+For combined documents (like books), it's recommended to use numerical prefixes for content files to maintain order:
 
 ```
 100_chapter_one.md
@@ -168,4 +125,8 @@ The extension assumes chapters/content are ordered by filename. A recommended na
 120_chapter_three.md
 ```
 
-This ensures correct ordering in file explorers and when combining files for export. Numbers can be used with increments (e.g., 10) to allow inserting new chapters (e.g., `105_new_chapter.md`).
+This ensures:
+
+- Files appear in correct order in file explorer
+- Easy to insert new chapters (e.g., `105_new_chapter.md`)
+- No need for explicit order configuration

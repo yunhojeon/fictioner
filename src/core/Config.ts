@@ -1,5 +1,6 @@
 import * as yaml from 'yaml';
-import * as path from 'path';
+import { Document } from './Document';
+import { FileSystem } from './types';
 
 // Types for configuration structure
 export type DocumentType = 'document' | 'individual';
@@ -21,63 +22,12 @@ export interface DocumentConfig {
     content: string;
     formats?: OutputFormat[];
     template?: FormatTemplates;
-    out_dir?: string;
-    out_filename?: string;
+    output?: string;
     options?: FormatOptions;
 }
 
 export interface WorkspaceConfig {
     [key: string]: DocumentConfig | string;  // String for shorthand syntax
-}
-
-// Class to represent a fully processed document configuration
-export class Document {
-    readonly name: string;
-    readonly type: DocumentType;
-    readonly content: string;
-    readonly formats: OutputFormat[];
-    readonly template: FormatTemplates;
-    readonly out_dir: string;
-    readonly out_filename: string;
-    readonly options: FormatOptions;
-
-    constructor(
-        name: string,
-        config: DocumentConfig,
-        defaults: DocumentConfig
-    ) {
-        this.name = name;
-        this.type = config.type || defaults.type || 'document';
-        this.content = config.content;
-        this.formats = config.formats || defaults.formats || ['docx'];
-        this.out_dir = config.out_dir || defaults.out_dir || '${content}/out';
-        this.template = { ...defaults.template, ...config.template };
-        this.out_filename = config.out_filename || defaults.out_filename || '${name}.${format}';
-        this.options = { ...defaults.options, ...config.options };
-    }
-
-    // Resolve variables in output path
-    resolveOutput(): string {
-        return this.out_dir.replace('${content}', path.dirname(this.content));
-    }
-
-    // Resolve variables in filename template
-    resolveFilename(format: OutputFormat, date: Date = new Date()): string {
-        let filename = this.out_filename
-            .replace('${name}', this.name)
-            .replace('${format}', format)
-            .replace('${date}', this.formatDate(date));
-
-        if (!filename.endsWith(format)) {
-            filename = `${filename}.${format}`;
-        }
-
-        return filename;
-    }
-
-    private formatDate(date: Date): string {
-        return date.toISOString().split('T')[0];
-    }
 }
 
 // Main configuration parser class
@@ -86,7 +36,7 @@ export class ConfigParser {
     private defaults: DocumentConfig;
     private documents: Map<string, Document>;
 
-    constructor(yamlContent: string) {
+    constructor(yamlContent: string, private fs: FileSystem) {
         try {
             this.config = yaml.parse(yamlContent);
             this.documents = new Map();
@@ -96,8 +46,7 @@ export class ConfigParser {
                     type: 'document',
                     content: '',
                     formats: ['docx'],
-                    out_dir: '${content}/out',
-                    out_filename: '${name}.${format}'
+                    output: '${content.dir}/out/${content.name}',
                 }
             );
             delete this.config['Default'];
@@ -110,7 +59,7 @@ export class ConfigParser {
                     : cfg;
 
                 const docConfig = this.parseDocumentConfig(fullConfig, this.defaults);
-                this.documents.set(name, new Document(name, docConfig, this.defaults));
+                this.documents.set(name, new Document(name, docConfig, this.defaults, this.fs));
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);

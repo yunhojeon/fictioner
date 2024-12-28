@@ -1,19 +1,26 @@
-import { Document, DocumentConfig, OutputFormat, ConfigParser } from '../../src/core/ConfigFile';
+import { DocumentConfig, OutputFormat, ConfigParser } from '../../src/core/Config';
+import { Document } from '../../src/core/Document';
 import { expect } from 'chai';
-import { readFileSync } from 'fs';
+import { readFile } from 'fs/promises';
 import path from 'path';
+import { FileSystem } from 'src/core/types';
+import { glob } from 'glob';
 
 // Utility function to normalize paths for cross-platform testing
 const normalizePath = (p: string) => path.normalize(p).replace(/\\/g, '/');
+const fs: FileSystem = {
+    findFiles: glob,
+    readFile: (path: string) => readFile(path, 'utf8')
+}
 
 describe('Document', () => {
     const defaultConfig: DocumentConfig = {
         type: 'document',
         content: '',
         formats: ['docx'],
-        out_dir: '${content}/out',
+        output: '${content}/out',
         template: {},
-        out_filename: '${name}.${format}',
+        output: '${name}.${format}',
         options: {}
     };
 
@@ -23,20 +30,20 @@ describe('Document', () => {
                 type: 'document',
                 content: 'content/path',
                 formats: ['pdf'],
-                out_dir: 'custom/output',
+                output: 'custom/output',
                 template: { pdf: 'template.pdf' },
-                out_filename: 'custom-${name}.${format}',
+                output: 'custom-${name}.${format}',
                 options: {}
             };
 
-            const doc = new Document('test', config, defaultConfig);
+            const doc = new Document('test', config, defaultConfig, fs);
 
             expect(doc.type).to.equal('document');
             expect(normalizePath(doc.content)).to.equal(normalizePath('content/path'));
             expect(doc.formats).to.deep.equal(['pdf']);
             expect(normalizePath(doc.out_dir)).to.equal(normalizePath('custom/output'));
             expect(doc.template).to.deep.equal({ pdf: 'template.pdf' });
-            expect(doc.out_filename).to.equal('custom-${name}.${format}');
+            expect(doc.output).to.equal('custom-${name}.${format}');
             expect(doc.options).to.deep.equal({});
         });
 
@@ -45,14 +52,14 @@ describe('Document', () => {
                 content: 'content/path'
             };
 
-            const doc = new Document('test', config, defaultConfig);
+            const doc = new Document('test', config, defaultConfig, fs);
 
             expect(doc.type).to.equal('document');
             expect(normalizePath(doc.content)).to.equal(normalizePath('content/path'));
             expect(doc.formats).to.deep.equal(['docx']);
             expect(doc.out_dir).to.equal('${content}/out');
             expect(doc.template).to.deep.equal({});
-            expect(doc.out_filename).to.equal('${name}.${format}');
+            expect(doc.output).to.equal('${name}.${format}');
             expect(doc.options).to.deep.equal({});
         });
     });
@@ -63,7 +70,7 @@ describe('Document', () => {
                 content: 'path/to/content/file.md'
             };
 
-            const doc = new Document('test', config, defaultConfig);
+            const doc = new Document('test', config, defaultConfig, fs);
             const expected = normalizePath('path/to/content/out');
             const actual = normalizePath(doc.resolveOutput());
 
@@ -75,10 +82,10 @@ describe('Document', () => {
         it('should replace variables in filename template', () => {
             const config: DocumentConfig = {
                 content: 'content/path',
-                out_filename: '${name}-${date}.${format}'
+                output: '${name}-${date}.${format}'
             };
 
-            const doc = new Document('test', config, defaultConfig);
+            const doc = new Document('test', config, defaultConfig, fs);
             const date = new Date('2024-01-01');
             const format: OutputFormat = 'docx';
 
@@ -89,27 +96,31 @@ describe('Document', () => {
 });
 
 describe('ConfigParser', () => {
-    const configText = readFileSync('fictioner.yml', 'utf8');
+    const configText = await readFile('fictioner.yml', 'utf8');
+    const parser = new ConfigParser(configText, fs);
+    const documents = parser.getDocuments();
 
     it('should parse config file and create Document objects', () => {
-        const parser = new ConfigParser(configText);
-        const documents = parser.getDocuments();
         expect(documents.length).to.equal(2);
     });
 
-    it('should correctly identify combined documents', () => {
-        const parser = new ConfigParser(configText);
-        const combDocs = parser.getCombinedDocuments();
+    const combDocs = parser.getCombinedDocuments();
+    it('there should be one combined document', () => {
         expect(combDocs.length).to.equal(1);
-        expect(combDocs[0].name).to.equal('My Novel');
+    })
+
+    it('should create combined Document object', () => {
+        const myNovel = combDocs[0];
+        expect(myNovel.name).to.equal('My Novel');
+        expect(myNovel.)
     });
 
     it('should correctly identify individual documents', () => {
-        const parser = new ConfigParser(configText);
         const indiDocs = parser.getIndividualDocuments();
         expect(indiDocs.length).to.equal(1);
         expect(indiDocs[0].name).to.equal('Blog Posts');
         expect(indiDocs[0].type).to.equal('individual');
     });
-});
 
+
+});

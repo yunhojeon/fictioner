@@ -1,9 +1,9 @@
 import { SemanticTag, SemanticTagKind } from './SemanticTag'
 import { SrcRange } from './types'
 
-export class FictionFile {
+export class ContentFile {
     semanticTags: SemanticTag[] = [];
-    frontMatter: string='';
+    frontMatter: string = '';
 
     // markdown content is given as string
     constructor(
@@ -98,8 +98,8 @@ export class FictionFile {
             const character = offset + match.index!;
             this.semanticTags.push(
                 new SemanticTag(
-                    new SrcRange(this, lineNum, character, lineNum, character+token.length), 
-                match[0])
+                    new SrcRange(this, lineNum, character, lineNum, character + token.length),
+                    match[0])
             );
         }
     }

@@ -1,22 +1,16 @@
-import { FictionFile } from './FictionFile'
+import { ContentFile } from './ContentFile'
 
-export class SrcLocation {
-
-    // line and character are zero-based. to be compatible with vscode's Position
+export class SrcRange {
     constructor(
-        public file: FictionFile,
-        public line: number,
-        public character: number) {
-    }
-}
-
-export class SrcRange extends SrcLocation {
-    constructor(
-        public file: FictionFile,
+        public file: ContentFile,
         public startLine: number,
         public startCharacter: number,
         public endLine: number,
         public endCharacter: number) {
-        super(file, startLine, startCharacter)
     }
+}
+
+export interface FileSystem {
+    findFiles(glob: string, exclude?: string): Promise<string[]>;
+    readFile(path: string): Promise<string>;
 }
