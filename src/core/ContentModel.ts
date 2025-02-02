@@ -16,8 +16,8 @@ export class ContentModel {
   // hashtag database
   private semanticTags: SemanticTag[] = [];                   // all hashtags, document order
   private fictionFiles: ContentFile[] = [];
-  private compiledMarkdown: string = '';
-  private mapTable: { [key: number]: number } = {};
+  public compiledMarkdown: string = '';
+  public mapTable: { [key: number]: number } = {};
   private frontMatter: string = '';
   private diagnostics: Diagnostic[] = [];
 
@@ -33,7 +33,7 @@ export class ContentModel {
 
     this.fictionFiles = await Promise.all(files.map(async (file) => {
       let text = await this.fs.readFile(file);
-      return new ContentFile(file);
+      return new ContentFile(text);
     }));
 
     this.compile();

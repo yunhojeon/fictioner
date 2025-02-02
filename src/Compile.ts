@@ -1,48 +1,72 @@
-import { DocumentProcessor } from './core/DocumentProcessor';
 import * as vscode from 'vscode';
 import path from 'path';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
+import { ContentModel } from './core/ContentModel';
 
-export class Compile {
-    private dp = new DocumentProcessor();
+function parsePandocError(stderr: string): { line: number; message: string } | null {
+    // Implementation of error parsing
+    return null;
+}
 
-    async runPandoc(inputPath: string): Promise<string> {
-        const outputFile = await this.dp.createTempFile('.docx');
+function mapPandocError(error: { line: number; message: string }, model: ContentModel): string {
+    const mappedLine = model.mapTable[error.line];
+    if (mappedLine !== undefined) {
+        const workspacePath = vscode.workspace.workspaceFolders?.[0].uri.fsPath || '';
+        // Note: We need to handle the file path differently since ContentModel's structure is different
+        // You might need to adjust this based on how file information is stored in ContentModel
+        return `Error at line ${mappedLine}:\n${error.message}`;
+    }
+    return error.message;
+}
 
-        try {
-            await new Promise<void>((resolve, reject) => {
-                exec(
-                    `pandoc "${inputPath}" -o "${outputFile.path}" --fail-if-warnings`,
-                    (error, stdout, stderr) => {
-                        if (error) {
-                            const pandocError = this.parsePandocError(stderr);
-                            if (pandocError) {
-                                const originalLocation = this.dp.mapLineToOriginal(pandocError.line);
-                                if (originalLocation) {
-                                    const workspacePath = vscode.workspace.workspaceFolders?.[0].uri.fsPath || '';
-                                    const relativePath = path.relative(workspacePath, originalLocation.file);
-                                    reject(new Error(
-                                        `Error in file "${relativePath}" at line ${originalLocation.line}:\n` +
-                                        `${pandocError.message}`
-                                    ));
-                                    return;
-                                }
-                            }
-                            reject(error);
-                        } else {
-                            resolve();
-                        }
-                    }
-                );
-            });
-            return outputFile.path;
-        } catch (error) {
-            throw error;
+export async function compile(source: string, model: ContentModel): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        const pandoc = spawn('pandoc', [
+            '--from', 'markdown',
+            '--to', 'docx',
+            '--fail-if-warnings'
+        ], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            windowsHide: true
+        });
+
+        // Ensure binary mode for stdout
+        if (pandoc.stdout.setEncoding) {
+            pandoc.stdout.setEncoding('binary');
         }
-    }
 
-    private parsePandocError(stderr: string): { line: number; message: string } | null {
-        // Implementation of error parsing
-        return null;
-    }
+        const chunks: Buffer[] = [];
+        const stderrChunks: Buffer[] = [];
+
+        pandoc.stdout.on('data', (chunk) => {
+            // Ensure we're handling chunks as Buffer
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        });
+        pandoc.stderr.on('data', (chunk) => stderrChunks.push(Buffer.from(chunk)));
+
+        pandoc.on('error', (err) => {
+            if (err.message.includes('ENOENT')) {
+                reject(new Error('Pandoc is not installed or not found in PATH'));
+            } else {
+                reject(err);
+            }
+        });
+
+        pandoc.on('close', (code) => {
+            if (code !== 0) {
+                const stderr = Buffer.concat(stderrChunks).toString();
+                const pandocError = parsePandocError(stderr);
+                if (pandocError) {
+                    reject(new Error(mapPandocError(pandocError, model)));
+                    return;
+                }
+                reject(new Error(`Pandoc failed with code ${code}:\n${stderr}`));
+                return;
+            }
+            resolve(Buffer.concat(chunks));
+        });
+
+        pandoc.stdin.write(source);
+        pandoc.stdin.end();
+    });
 }

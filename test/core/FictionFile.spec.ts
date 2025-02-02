@@ -21,8 +21,7 @@ Another paragraph.
 ‘Curly quotes’ and “double curly quotes”.
 `;
 
-                const out = `
-# Heading
+                const out = `# Heading
 
 This is a paragraph.
 

@@ -1,3 +1,8 @@
+---
+title: My Awesome Novel
+author: Yunho Jeon
+---
+
 # Prologue
 
 A long time ago in a galaxy far, far away...

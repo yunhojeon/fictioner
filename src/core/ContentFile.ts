@@ -21,7 +21,7 @@ export class ContentFile {
     // 6. Build mapTable to map line numbers in the processed content to the original content
     // 7. Add one blank line at the end
     public processMarkdown(): { frontMatter: string, processedMarkdown: string, mapTable: { [key: number]: number } } {
-        const frontMatterRegex = /^---\s*\n([\s\S]*?)\n---\t*\n/;
+        const frontMatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/m;
         const htmlCommentRegex = /<!--[\s\S]*?-->/g;
         const lineSeparatorRegex = /^\*\*\*$/gm;
         const curlyQuoteRegex = /[\u2018\u2019\u201C\u201D]/g;  // Unicode for ''""

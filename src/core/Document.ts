@@ -1,6 +1,7 @@
 import { ContentModel } from './ContentModel';
 import { FileSystem } from './types';
 import { DocumentConfig, DocumentType, FormatOptions, FormatTemplates, OutputFormat } from "./Config";
+import path from 'path';
 
 
 // Class to represent a fully processed document configuration
@@ -31,14 +32,15 @@ export class Document {
         this.options = { ...defaults.options, ...config.options };
     }
 
-    async readContent() {
+    async readContent(): Promise<ContentModel> {
         this.model = new ContentModel(this, this.fs);
         await this.model.readContent();
+        return this.model;
     }
 
     // Resolve variables in output path
     resolveOutput(): string {
-        return this.out_dir.replace('${content}', path.dirname(this.content));
+        return this.out_dir.replace('${content.dir}', path.dirname(this.content));
     }
 
     // Resolve variables in filename template

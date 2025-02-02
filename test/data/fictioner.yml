@@ -1,5 +1,5 @@
 My Novel:
-  content: novel/c/*.md
+  content: novel/c/**/*.md
   formats: docx, epub
   output: novel/out/${name}.${format}
 
