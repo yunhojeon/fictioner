@@ -11,6 +11,12 @@ export class SrcRange {
 }
 
 export interface FileSystem {
-    findFiles(glob: string, exclude?: string): Promise<string[]>;
+    findFiles(pattern: string, exclude?: string): Promise<string[]>;
     readFile(path: string): Promise<string>;
 }
+
+export type ExporterError = {
+    line: number;
+    column: number;
+    message: string;
+};

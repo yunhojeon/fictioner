@@ -45,10 +45,20 @@ export class Document {
 
     // Resolve variables in filename template
     resolveFilename(format: OutputFormat, date: Date = new Date()): string {
-        let filename = this.out_filename
-            .replace('${name}', this.name)
-            .replace('${format}', format)
-            .replace('${date}', this.formatDate(date));
+        const contentPath = this.content;
+        const contentDir = path.dirname(contentPath);
+        const contentName = path.basename(contentPath, path.extname(contentPath));
+        const contentExt = path.extname(contentPath);
+        // const templatePath = this.template[format];
+
+        let filename = this.output
+            .replace(/\${content\.dir}/g, contentDir)
+            .replace(/\${content\.name}/g, contentName)
+            .replace(/\${content\.ext}/g, contentExt)
+            .replace(/\${name}/g, this.name)
+            .replace(/\${format}/g, format)
+            .replace(/\${date}/g, this.formatDate(date));
+        // .replace(/\${template\.(.*?)}/g, (_, fmt) => this.template[fmt as OutputFormat] || '');
 
         if (!filename.endsWith(format)) {
             filename = `${filename}.${format}`;

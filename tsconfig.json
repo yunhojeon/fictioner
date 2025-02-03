@@ -15,7 +15,11 @@
 		// "noUnusedParameters": true,  /* Report errors on unused parameters. */
 		"esModuleInterop": true,
 		"moduleResolution": "node",
-		"types": ["node", "mocha"],
+		"types": [
+			"node",
+			"mocha",
+			"jest"
+		],
 		"baseUrl": ".",
 		"paths": {
 			"*": [

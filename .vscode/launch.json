@@ -33,40 +33,30 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Mocha: all test cases",
-			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-			"cwd": "${workspaceFolder}/test/data",
+			"name": "Jest All",
+			"program": "${workspaceFolder}/node_modules/jest/bin/jest",
 			"args": [
-				"--timeout",
-				"999999",
-				"--colors",
-				"--require",
-				"ts-node/register",
-				"${workspaceFolder}/test/**/*.spec.ts" // Changed from ${file} to only run test files
+				"--runInBand",
+				"--config",
+				"jest.config.js"
 			],
+			"cwd": "${workspaceFolder}",
 			"console": "integratedTerminal",
-			"skipFiles": [
-				"<node_internals>/**"
-			]
+			"internalConsoleOptions": "neverOpen"
 		},
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Mocha: run current test case",
-			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-			"cwd": "${workspaceFolder}/test/data",
+			"name": "Jest Current File",
+			"program": "${workspaceFolder}/node_modules/jest/bin/jest",
 			"args": [
-				"--timeout",
-				"999999",
-				"--colors",
-				"--require",
-				"ts-node/register",
-				"${file}"
+				"${fileBasename}",
+				"--config",
+				"jest.config.js"
 			],
+			"cwd": "${workspaceFolder}",
 			"console": "integratedTerminal",
-			"skipFiles": [
-				"<node_internals>/**"
-			]
+			"internalConsoleOptions": "neverOpen"
 		}
 	]
 }

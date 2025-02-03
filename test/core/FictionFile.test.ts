@@ -1,4 +1,3 @@
-import { strict as assert } from 'assert';
 import { ContentFile } from '../../src/core/ContentFile';
 
 describe('FictionFile', () => {
@@ -18,7 +17,7 @@ This is a paragraph.
 Another paragraph.
 
 
-‘Curly quotes’ and “double curly quotes”.
+'Curly quotes' and "double curly quotes".
 `;
 
                 const out = `# Heading
@@ -30,16 +29,16 @@ This is a paragraph.
 Another paragraph.
 
 &nbsp;
-\\‘Curly quotes\\’ and \\“double curly quotes\\”.
+'Curly quotes' and "double curly quotes".
 
 `;
 
                 const fictionFile = new ContentFile(src);
                 const result = fictionFile.processMarkdown();
 
-                assert.equal(result.frontMatter, `title: Test\nauthor: Author`);
-                assert.equal(result.processedMarkdown, out);
-                assert.ok(Object.keys(result.mapTable).length > 0);
+                expect(result.frontMatter).toBe(`title: Test\nauthor: Author`);
+                expect(result.processedMarkdown).toBe(out);
+                expect(Object.keys(result.mapTable).length).toBeGreaterThan(0);
         });
 
         it('should handle inline comments', () => {
@@ -56,6 +55,6 @@ Only text remains.
                 const fictionFile = new ContentFile(src);
                 const result = fictionFile.processMarkdown();
 
-                assert.equal(result.processedMarkdown, out);
+                expect(result.processedMarkdown).toBe(out);
         });
 });

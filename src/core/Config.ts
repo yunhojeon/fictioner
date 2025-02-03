@@ -111,14 +111,14 @@ export class ConfigParser {
 }
 
 // Usage example
-export function parseConfig(yamlContent: string): ConfigParser {
-    try {
-        return new ConfigParser(yamlContent);
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to parse configuration: ${errorMessage}`);
-    }
-}
+// export function parseConfig(yamlContent: string): ConfigParser {
+//     try {
+//         return new ConfigParser(yamlContent);
+//     } catch (error) {
+//         const errorMessage = error instanceof Error ? error.message : String(error);
+//         throw new Error(`Failed to parse configuration: ${errorMessage}`);
+//     }
+// }
 
 // Example usage:
 // const config = `

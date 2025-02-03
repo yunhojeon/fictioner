@@ -1,9 +1,7 @@
 import { SemanticTag, SemanticTagKind } from './SemanticTag';
 import { DocumentConfig } from './Config';
 import { ContentFile } from './ContentFile';
-import { SrcRange, FileSystem } from './types';
-
-
+import { SrcRange, FileSystem, ExporterError } from './types';
 
 type Diagnostic = {
   range: SrcRange;
