@@ -15,7 +15,6 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:fictioner.enable",
 		"workspaceContains:fictioner.yml"
 	],
 	"main": "./out/extension.js",
