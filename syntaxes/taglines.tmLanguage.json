@@ -1,0 +1,23 @@
+{
+    "scopeName": "fictioner.markdown.tags",
+    "injectionSelector": "L:text.html.markdown",
+    "patterns": [
+        {
+            "include": "#tagLine"
+        }
+    ],
+    "repository": {
+        "tagLine": {
+            "name": "meta.fictioner.tagline.markdown",
+            "match": "^(#)(?!\\s)([\\p{L}\\p{N}_-]+)",
+            "captures": {
+                "1": {
+                    "name": "meta.tag"
+                },
+                "2": {
+                    "name": "entity.name.tag.markdown"
+                }
+            }
+        }
+    }
+}

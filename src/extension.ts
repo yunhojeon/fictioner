@@ -3,6 +3,7 @@ import { Uri, window, workspace } from 'vscode';
 import { FictionModel, Hashtag } from './FictionModel';
 import { AnalyticsView } from './Analytics';
 import { readTextFile, writeTextFile, formatString, openAndSelectLine } from './Util';
+import type MarkdownIt from "markdown-it";
 
 
 const CONFIG_FILE = "fictioner.yml";
@@ -79,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	regCmd('fictioner.analytics', async () => {
 		openAnalytics();
 	});
-	
+
 	model = new FictionModel();
 
 	// analytics view
@@ -103,6 +104,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.concat(disposables);
 
 	vscode.commands.executeCommand('setContext', 'fictionerEnabled', true);
+
+	return { extendMarkdownIt }; // to make it visible to markdown extension
 }
 
 // this method is called when your extension is deactivated
@@ -125,6 +128,34 @@ function openConfig() {
 
 async function openAnalytics() {
 	analyticsView.show();
+}
+
+export function extendMarkdownIt(md: MarkdownIt) {
+	return md.use(hideTagLinesPlugin);
+}
+
+
+function hideTagLinesPlugin(md: MarkdownIt) {
+	const tagLineRe = /^#(?!\s)([\p{L}\p{N}_-]+).*$/u;
+
+	md.block.ruler.before("heading", "myext_hide_tag_line", (state, startLine, endLine, silent) => {
+		if (startLine >= endLine) return false;
+
+		const start = state.bMarks[startLine] + state.tShift[startLine];
+		const end = state.eMarks[startLine];
+		const line = state.src.slice(start, end);
+
+		if (!tagLineRe.test(line)) return false;
+		if (silent) return true;
+
+		// Push a token that renders to nothing
+		state.push("myext_hidden_tag_line", "", 0);
+
+		state.line = startLine + 1;
+		return true;
+	});
+
+	md.renderer.rules.myext_hidden_tag_line = () => "";
 }
 
 const configTemplate = `# Fictioner sample config file
