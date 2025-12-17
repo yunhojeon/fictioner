@@ -309,7 +309,8 @@ function path2files(model: FictionModel, filepath: string): DocFile[] {
   const pattern = path.isAbsolute(filepath)
     ? filepath
     : path.join(homeDir()!.fsPath, filepath);
-  let matches = glob.sync(pattern);
+  const globPattern = pattern.replace(/\\/g, "/"); // glob expects POSIX separators on Windows
+  let matches = glob.sync(globPattern, { windowsPathsNoEscape: true });
   return matches.map((filename) => new DocFile(model, filename));
 }
 
