@@ -303,8 +303,14 @@ function obj2doc(model: FictionModel, obj: any): DocObject {
 // given relative file path glob pattern, returns list of DocFiles
 //
 function path2files(model: FictionModel, filepath: string): DocFile[] {
-  return glob.sync(path.join(homeDir()!.fsPath, filepath))
-    .map((filename) => new DocFile(model, filename));
+  // If the caller passes an absolute path (common on Windows), path.join()
+  // prepends the workspace path and produces an invalid "C:\workspace\C:\..." path.
+  // Use the absolute path as-is; otherwise resolve relative to workspace.
+  const pattern = path.isAbsolute(filepath)
+    ? filepath
+    : path.join(homeDir()!.fsPath, filepath);
+  let matches = glob.sync(pattern);
+  return matches.map((filename) => new DocFile(model, filename));
 }
 
 function allFiles(contents: DocObject): DocFile[] {
