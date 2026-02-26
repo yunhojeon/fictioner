@@ -48,6 +48,9 @@
 				"command": "fictioner.analytics",
 				"title": "Fictioner: Analytics",
 				"icon": "$(light-bulb)"
+			},
+			{
+				"command": "fictioner."
 			}
 		],
 		"views": {
